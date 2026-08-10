@@ -1,0 +1,22 @@
+{
+  "name": "Federal Padel 2026",
+  "short_name": "FedPadel26",
+  "description": "Organizá tu campeonato de pádel",
+  "start_url": "./federal-padel.html",
+  "display": "standalone",
+  "background_color": "#eff6ff",
+  "theme_color": "#1e40af",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://kimi-web-img.moonshot.cn/img/static.vecteezy.com/8c81c1b987fda513fa6acbdf23cfa8c48608747b.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "https://kimi-web-img.moonshot.cn/img/static.vecteezy.com/8c81c1b987fda513fa6acbdf23cfa8c48608747b.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
