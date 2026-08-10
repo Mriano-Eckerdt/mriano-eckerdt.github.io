@@ -866,10 +866,10 @@ function completeSetup() {
     return;
   }
 
-  // Crear admin
+  // Crear SUPER ADMIN (el primer usuario siempre es superadmin)
   const token = generateToken();
-  users[username] = { password: password, role: 'admin', createdAt: Date.now() };
-  currentUser = { username: username, role: 'admin', token: token };
+  users[username] = { password: password, role: 'superadmin', createdAt: Date.now() };
+  currentUser = { username: username, role: 'superadmin', token: token };
 
   localStorage.setItem('fp_users', JSON.stringify(users));
   localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
@@ -953,13 +953,25 @@ function enterApp() {
   infoBar.style.display = 'flex';
   document.getElementById('current-username-display').textContent = currentUser.username;
   const roleBadge = document.getElementById('current-role-display');
-  roleBadge.textContent = currentUser.role === 'admin' ? '🔐 Admin' : '👤 Usuario';
-  roleBadge.className = 'badge ' + (currentUser.role === 'admin' ? 'badge-admin' : 'badge-user');
+
+  if (currentUser.role === 'superadmin') {
+    roleBadge.textContent = '🔱 Super Admin';
+    roleBadge.className = 'badge';
+    roleBadge.style.cssText = 'background:#fef3c7;color:#92400e;border:1px solid #facc15;';
+  } else if (currentUser.role === 'admin') {
+    roleBadge.textContent = '🔐 Admin';
+    roleBadge.className = 'badge badge-admin';
+    roleBadge.style.cssText = '';
+  } else {
+    roleBadge.textContent = '👤 Usuario';
+    roleBadge.className = 'badge badge-user';
+    roleBadge.style.cssText = '';
+  }
 
   // Mostrar/ocultar tabs según rol
   const usersTab = document.getElementById('tab-btn-users');
   const adminTab = document.getElementById('tab-btn-admin');
-  if (currentUser.role === 'admin') {
+  if (currentUser.role === 'superadmin' || currentUser.role === 'admin') {
     usersTab.style.display = 'inline-block';
     adminTab.style.display = 'inline-block';
   } else {
@@ -975,7 +987,30 @@ function enterApp() {
   // Renderizar todo
   renderAll();
   loadCoverPhoto();
+
+  // Ajustar select de roles según quién está logueado
+  adjustRoleSelect();
 }
+function adjustRoleSelect() {
+  const roleSelect = document.getElementById('new-user-role');
+  if (!roleSelect) return;
+
+  if (currentUser?.role === 'superadmin') {
+    // Superadmin puede crear admins y usuarios
+    roleSelect.innerHTML = `
+      <option value="user">👤 Usuario (carga resultados, no modifica lo existente)</option>
+      <option value="admin">🔐 Administrador (acceso total excepto gestión de admins)</option>
+    `;
+  } else if (currentUser?.role === 'admin') {
+    // Admin solo puede crear usuarios normales
+    roleSelect.innerHTML = `
+      <option value="user">👤 Usuario (carga resultados, no modifica lo existente)</option>
+    `;
+  }
+}
+
+// ============================================
+// TORNEO - FUNCIONES AUXILIARES
 
 function logout() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -1059,7 +1094,9 @@ function listenToUsers() {
 // PANEL DE USUARIOS (ADMIN)
 // ============================================
 function createUser() {
-  if (currentUser?.role !== 'admin') { alert('🚫 Solo administradores pueden crear usuarios.'); return; }
+  if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') { 
+    alert('🚫 Solo administradores pueden crear usuarios.'); return; 
+  }
   const username = document.getElementById('new-user-username').value.trim().toLowerCase();
   const password = document.getElementById('new-user-password').value.trim();
   const role = document.getElementById('new-user-role').value;
@@ -1074,21 +1111,45 @@ function createUser() {
     return;
   }
 
+  // Solo superadmin puede crear admins
+  if (role === 'admin' && currentUser?.role !== 'superadmin') {
+    msgEl.innerHTML = '<span style="color:var(--danger);">🚫 Solo el Super Admin puede crear administradores.</span>';
+    return;
+  }
+
+  // Nadie puede crear superadmins
+  if (role === 'superadmin') {
+    msgEl.innerHTML = '<span style="color:var(--danger);">🚫 No se pueden crear más Super Admins.</span>';
+    return;
+  }
+
   users[username] = { password: password, role: role, createdAt: Date.now(), createdBy: currentUser.username };
   localStorage.setItem('fp_users', JSON.stringify(users));
   saveUsersToFirebase();
 
   document.getElementById('new-user-username').value = '';
   document.getElementById('new-user-password').value = '';
-  msgEl.innerHTML = '<span style="color:var(--success);">✅ Usuario creado: ' + username + '</span>';
+  msgEl.innerHTML = '<span style="color:var(--success);">✅ Usuario creado: ' + username + ' (' + (role === 'admin' ? 'Admin' : 'Usuario') + ')</span>';
   renderUsersList();
   setTimeout(() => msgEl.innerHTML = '', 3000);
 }
 
 function deleteUser(username) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') return;
   if (!confirm('¿Eliminar al usuario "' + username + '" permanentemente?')) return;
   if (username === currentUser.username) { alert('❌ No podés eliminarte a vos mismo.'); return; }
+
+  // Nadie puede eliminar al superadmin
+  if (users[username]?.role === 'superadmin') {
+    alert('🚫 No podés eliminar al Super Admin.');
+    return;
+  }
+
+  // Los admins no pueden eliminar a otros admins (solo superadmin puede)
+  if (users[username]?.role === 'admin' && currentUser?.role !== 'superadmin') {
+    alert('🚫 Solo el Super Admin puede eliminar a otros administradores.');
+    return;
+  }
 
   delete users[username];
   localStorage.setItem('fp_users', JSON.stringify(users));
@@ -1108,8 +1169,21 @@ function deleteUser(username) {
 }
 
 function kickUser(username) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') return;
   if (username === currentUser.username) { alert('❌ No podés kickearte a vos mismo.'); return; }
+
+  // Nadie puede kickear al superadmin
+  if (users[username]?.role === 'superadmin') {
+    alert('🚫 No podés desconectar al Super Admin.');
+    return;
+  }
+
+  // Los admins no pueden kickear a otros admins (solo superadmin puede)
+  if (users[username]?.role === 'admin' && currentUser?.role !== 'superadmin') {
+    alert('🚫 Solo el Super Admin puede desconectar a otros administradores.');
+    return;
+  }
+
   if (!confirm('¿Desconectar al usuario "' + username + '"?')) return;
 
   if (firebaseDb) {
@@ -1147,9 +1221,22 @@ function renderUsersList() {
     const statusDot = u.isOnline
       ? '<span class="user-status online"></span><span style="color:var(--success);font-weight:700;">🟢 En línea</span>'
       : '<span class="user-status offline"></span><span style="color:var(--text-tertiary);font-weight:600;">🔴 Desconectado</span>';
-    const roleBadge = u.role === 'admin'
-      ? '<span class="badge badge-admin">🔐 Admin</span>'
-      : '<span class="badge badge-user">👤 Usuario</span>';
+
+    let roleBadge = '';
+    if (u.role === 'superadmin') {
+      roleBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #facc15;">🔱 Super Admin</span>';
+    } else if (u.role === 'admin') {
+      roleBadge = '<span class="badge badge-admin">🔐 Admin</span>';
+    } else {
+      roleBadge = '<span class="badge badge-user">👤 Usuario</span>';
+    }
+
+    // Solo mostrar botones si el usuario actual tiene permisos
+    const canKick = currentUser?.role === 'superadmin' || 
+      (currentUser?.role === 'admin' && u.role === 'user');
+    const canDelete = currentUser?.role === 'superadmin' || 
+      (currentUser?.role === 'admin' && u.role === 'user');
+
     return `<div class="user-row">
       <div style="flex:1;">
         <div style="font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;">
@@ -1160,8 +1247,8 @@ function renderUsersList() {
         </div>
       </div>
       <div style="display:flex;gap:6px;">
-        ${u.isOnline ? `<button class="btn btn-warning btn-sm" onclick="kickUser('${u.username}')">👢 Desconectar</button>` : ''}
-        <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')">🗑️ Eliminar</button>
+        ${u.isOnline && canKick ? `<button class="btn btn-warning btn-sm" onclick="kickUser('${u.username}')">👢 Desconectar</button>` : ''}
+        ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')">🗑️ Eliminar</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1328,6 +1415,17 @@ function renderAll() {
 }
 
 function applyUserRestrictions() {
+  // Superadmin: sin restricciones
+  if (currentUser?.role === 'superadmin') return;
+
+  // Admin: puede modificar TODO excepto gestionar usuarios admin (eso es en la pestaña Usuarios)
+  if (currentUser?.role === 'admin') {
+    // Los admins pueden hacer casi todo, solo ocultamos el banner de usuario
+    const banner = document.getElementById('user-banner');
+    if (banner) banner.style.display = 'none';
+    return;
+  }
+
   // Usuario normal: puede cargar datos nuevos, NO modificar lo existente
   document.querySelectorAll('.score-input').forEach(el => {
     const val = el.value;
