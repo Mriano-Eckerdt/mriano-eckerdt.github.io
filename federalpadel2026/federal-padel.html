@@ -1504,14 +1504,15 @@ function applyUserRestrictions() {
   if (clearGroupBtn) clearGroupBtn.style.display = 'none';
   const clearKnockBtn = document.querySelector('button[onclick="clearKnockout()"]');
   if (clearKnockBtn) clearKnockBtn.style.display = 'none';
-  document.querySelectorAll('button[onclick^="togglePlayerPayment"]').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.payment-method-select').forEach(el => el.style.display = 'none');
+  // Los usuarios invitados SÍ pueden registrar pagos (verán solo lo suyo en Caja por Usuario)
+  // document.querySelectorAll('button[onclick^="togglePlayerPayment"]').forEach(el => el.style.display = 'none');
+  // document.querySelectorAll('.payment-method-select').forEach(el => el.style.display = 'none');
   let banner = document.getElementById('user-banner');
   if (!banner) {
     banner = document.createElement('div');
     banner.id = 'user-banner';
     banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--accent-light);color:var(--accent);padding:10px;text-align:center;font-weight:800;font-size:13px;z-index:9999;border-top:2px solid var(--accent);';
-    banner.innerHTML = '👤 Modo Usuario — Podés cargar datos nuevos. No podés modificar lo ya cargado.';
+    banner.innerHTML = '👤 Modo Usuario — Podés cargar datos nuevos y registrar pagos. No podés modificar lo ya cargado por otros.';
     document.body.appendChild(banner);
   }
   banner.style.display = 'block';
@@ -1549,7 +1550,7 @@ function addTeam() {
 }
 
 function removeTeam(id) {
-  if (currentUser?.role !== 'admin') { alert('🚫 Solo admin puede eliminar.'); return; }
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo admin puede eliminar.'); return; }
   if (!confirm('¿Eliminar esta pareja?')) return;
   teams = teams.filter(t => t.id !== id);
   zones.forEach(z => { z.teamIds = (z.teamIds || []).filter(tid => tid !== id); });
@@ -1560,7 +1561,7 @@ function removeTeam(id) {
 }
 
 function clearTeams() {
-  if (currentUser?.role !== 'admin') { alert('🚫 Solo admin puede limpiar.'); return; }
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo admin puede limpiar.'); return; }
   if (!confirm('¿Borrar TODAS las parejas?')) return;
   teams = []; zones = []; groupMatches = []; groupResults = {}; knockoutMatches = []; knockoutResults = {};
   save();
@@ -1568,7 +1569,7 @@ function clearTeams() {
 }
 
 function togglePlayerPayment(teamId, playerNum) {
-  if (currentUser?.role !== 'admin') { alert('🚫 Solo admin puede modificar pagos.'); return; }
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo admin puede modificar pagos.'); return; }
   const t = teams.find(x => x.id == teamId);
   if (!t) return;
   if (playerNum === 1) t.p1Paid = !t.p1Paid;
@@ -1577,7 +1578,7 @@ function togglePlayerPayment(teamId, playerNum) {
 }
 
 function setPlayerMethod(teamId, playerNum, method) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   const t = teams.find(x => x.id == teamId);
   if (!t) return;
   if (playerNum === 1) { t.p1Method = method; if (method) t.p1Paid = true; }
@@ -1666,7 +1667,7 @@ function addCourt() {
   renderCourts();
 }
 function removeCourt(id) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   if (!confirm('¿Eliminar esta cancha?')) return;
   courts = courts.filter(c => c.id !== id);
   groupMatches.forEach(m => { if (m.courtId == id) { m.courtId = null; m.courtName = null; } });
@@ -1700,7 +1701,7 @@ function getTimeInput(matchId, isKnockout) {
   return `<input type="time" class="score-input" style="width:90px;padding:6px 8px;font-size:13px;" value="${value}" onchange="${onchange}" />`;
 }
 function saveGroupCourt(mid, courtId) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   const m = groupMatches.find(x => x.id == mid);
   if (!m) return;
   m.courtId = courtId ? parseFloat(courtId) : null;
@@ -1714,7 +1715,7 @@ function saveGroupTime(mid, time) {
   save();
 }
 function saveKnockoutCourt(mid, courtId) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   const m = knockoutMatches.find(x => x.id == mid);
   if (!m) return;
   m.courtId = courtId ? parseFloat(courtId) : null;
@@ -1742,7 +1743,7 @@ function addZone() {
   renderZones();
 }
 function removeZone(id) {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   if (!confirm('¿Eliminar esta zona?')) return;
   zones = zones.filter(z => z.id !== id);
   teams.forEach(t => { if (t.zoneId === id) t.zoneId = null; });
@@ -1751,6 +1752,7 @@ function removeZone(id) {
   renderZones();
 }
 function assignTeamToZone(teamId, zoneId) {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo admin puede asignar equipos.'); return; }
   const team = teams.find(t => t.id == teamId);
   const zone = zones.find(z => z.id == zoneId);
   if (!team || !zone) return;
@@ -1763,6 +1765,7 @@ function assignTeamToZone(teamId, zoneId) {
   renderZones();
 }
 function removeFromZone(teamId, zoneId) {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo admin puede modificar zonas.'); return; }
   const zone = zones.find(z => z.id == zoneId);
   if (zone) zone.teamIds = (zone.teamIds || []).filter(tid => tid != teamId);
   const team = teams.find(t => t.id == teamId);
@@ -1812,6 +1815,7 @@ function renderZones() {
 // GRUPOS
 // ============================================
 function generateGroupFixture() {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo administradores pueden generar fixtures.'); return; }
   const invalid = zones.find(z => { const n = (z.teamIds || []).length; return n < 3 || n > 4; });
   if (invalid) { alert('Todas las zonas deben tener 3 o 4 equipos. Revisá "' + invalid.name + '"'); return; }
   const oldResults = { ...groupResults };
@@ -1840,7 +1844,7 @@ function generateGroupFixture() {
   alert('Fixture de grupos generado: ' + groupMatches.length + ' partidos');
 }
 function clearGroupFixture() {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   if (!confirm('¿Borrar fixture de grupos?')) return;
   groupMatches = []; groupResults = {};
   save();
@@ -2010,6 +2014,7 @@ function getZoneQualifiers() {
   return qualifiers;
 }
 function generateKnockout() {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo administradores pueden generar eliminatorias.'); return; }
   const incomplete = groupMatches.filter(m => {
     const r = groupResults[m.id];
     return !r || (!r.s1t1 && r.s1t1 !== 0);
@@ -2079,7 +2084,7 @@ function generateKnockout() {
   alert('Eliminatorias generadas: ' + totalMatches + ' partidos');
 }
 function clearKnockout() {
-  if (currentUser?.role !== 'admin') return;
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   if (!confirm('¿Borrar eliminatorias?')) return;
   knockoutMatches = []; knockoutResults = {};
   save();
