@@ -1,4 +1,4 @@
-const CACHE_NAME = 'federal-padel-2026-v1';
+const CACHE_NAME = 'federal-padel-2026-v2';
 const urlsToCache = [
   './federal-padel.html',
   './manifest.json'
