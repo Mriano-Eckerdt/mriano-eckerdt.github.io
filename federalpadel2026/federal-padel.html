@@ -291,6 +291,9 @@
         <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--text-tertiary);">
           Federal Padel 2026 v2.0 • Acceso restringido
         </div>
+        <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text-tertiary);font-weight:600;">
+          © 2026 Eckerdt Mariano. Todos los derechos reservados.
+        </div>
       </div>
     </div>
 
@@ -558,6 +561,11 @@
         <div class="card-title">📋 Detalle por categoría y género</div>
         <div id="balance-by-category"></div>
       </div>
+      <div class="card">
+        <div class="card-title">📒 Caja por Usuario (quién registró el pago)</div>
+        <p class="card-subtitle">Resumen de pagos discriminados por el usuario que registró el cobro y método de pago.</p>
+        <div id="balance-by-cashier"></div>
+      </div>
     </div>
 
     <!-- USUARIOS (SOLO ADMIN) -->
@@ -687,6 +695,7 @@
     <footer>
       <p>Creado por <strong>Eckerdt Mariano</strong></p>
       <p class="small" style="margin-top:4px;">Federal Padel 2026 v2.0</p>
+      <p class="small" style="margin-top:4px;">© 2026 Eckerdt Mariano. Todos los derechos reservados.</p>
     </footer>
   </div>
 
@@ -1291,16 +1300,31 @@ function save() {
 
 function saveToFirebase() {
   if (!firebaseDb) return;
+
+  // 1. Guardar estructura del torneo (sin resultados)
   const data = {
-    teams, zones, courts, groupMatches,
-    groupResults: sanitizeForFirebase(groupResults),
-    knockoutMatches,
-    knockoutResults: sanitizeForFirebase(knockoutResults),
+    teams, zones, courts, groupMatches, knockoutMatches,
     activeTournament,
     updatedAt: Date.now(),
     updatedBy: deviceId
   };
   firebaseDb.ref('fp2026_data').set(data).catch(e => console.error('Firebase save error:', e));
+
+  // 2. Guardar resultados de grupos POR PARTIDO (atómico)
+  for (const [mid, result] of Object.entries(groupResults)) {
+    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
+      firebaseDb.ref('fp2026_groupResults/' + String(mid).replace(/\./g, '_')).set(result)
+        .catch(e => console.error('Firebase group result error:', e));
+    }
+  }
+
+  // 3. Guardar resultados de eliminatorias POR PARTIDO (atómico)
+  for (const [mid, result] of Object.entries(knockoutResults)) {
+    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
+      firebaseDb.ref('fp2026_knockoutResults/' + String(mid).replace(/\./g, '_')).set(result)
+        .catch(e => console.error('Firebase knockout result error:', e));
+    }
+  }
 }
 
 function sanitizeForFirebase(obj) {
@@ -1325,6 +1349,8 @@ function unsanitizeFromFirebase(obj) {
 
 function listenToFirebaseData() {
   if (!firebaseDb) return;
+
+  // Escuchar estructura del torneo (equipos, zonas, canchas, partidos)
   firebaseDb.ref('fp2026_data').on('value', snap => {
     const data = snap.val();
     if (!data) return;
@@ -1334,11 +1360,51 @@ function listenToFirebaseData() {
     if (data.courts) courts = data.courts;
     if (data.groupMatches) groupMatches = data.groupMatches;
     if (data.knockoutMatches) knockoutMatches = data.knockoutMatches;
-    if (data.groupResults) groupResults = { ...groupResults, ...unsanitizeFromFirebase(data.groupResults) };
-    if (data.knockoutResults) knockoutResults = { ...knockoutResults, ...unsanitizeFromFirebase(data.knockoutResults) };
     if (data.activeTournament !== undefined) activeTournament = data.activeTournament;
     saveLocalOnly();
     renderAll();
+  });
+
+  // Escuchar resultados de grupos POR PARTIDO (atómico)
+  firebaseDb.ref('fp2026_groupResults').on('child_added', snap => {
+    const mid = snap.key.replace(/_/g, '.');
+    const result = snap.val();
+    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
+      groupResults[mid] = result;
+      saveLocalOnly();
+      renderGroups(); renderStandings();
+    }
+  });
+
+  firebaseDb.ref('fp2026_groupResults').on('child_changed', snap => {
+    const mid = snap.key.replace(/_/g, '.');
+    const result = snap.val();
+    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
+      groupResults[mid] = result;
+      saveLocalOnly();
+      renderGroups(); renderStandings();
+    }
+  });
+
+  // Escuchar resultados de eliminatorias POR PARTIDO (atómico)
+  firebaseDb.ref('fp2026_knockoutResults').on('child_added', snap => {
+    const mid = snap.key.replace(/_/g, '.');
+    const result = snap.val();
+    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
+      knockoutResults[mid] = result;
+      saveLocalOnly();
+      renderKnockout();
+    }
+  });
+
+  firebaseDb.ref('fp2026_knockoutResults').on('child_changed', snap => {
+    const mid = snap.key.replace(/_/g, '.');
+    const result = snap.val();
+    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
+      knockoutResults[mid] = result;
+      saveLocalOnly();
+      renderKnockout();
+    }
   });
 }
 
@@ -2179,19 +2245,21 @@ function renderPaid() {
   const list = document.getElementById('paid-list');
   const paid = [];
   teams.forEach(t => {
-    if (t.p1Paid) paid.push({ name: t.p1, team: t.name, cat: t.cat, gender: t.gender, method: t.p1Method, playerNum: 1, teamId: t.id });
-    if (t.p2Paid) paid.push({ name: t.p2, team: t.name, cat: t.cat, gender: t.gender, method: t.p2Method, playerNum: 2, teamId: t.id });
+    if (t.p1Paid) paid.push({ name: t.p1, team: t.name, cat: t.cat, gender: t.gender, method: t.p1Method, registeredBy: t.p1RegisteredBy, playerNum: 1, teamId: t.id });
+    if (t.p2Paid) paid.push({ name: t.p2, team: t.name, cat: t.cat, gender: t.gender, method: t.p2Method, registeredBy: t.p2RegisteredBy, playerNum: 2, teamId: t.id });
   });
   if (!paid.length) { list.innerHTML = '<div class="empty">Nadie pagó todavía</div>'; return; }
   paid.sort((a, b) => (a.method || '').localeCompare(b.method || ''));
   list.innerHTML = paid.map(p => {
     const methodLabel = p.method ? (paymentMethods[p.method] || p.method) : '💵 Sin método';
     const genderBadge = p.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
+    const registeredByLabel = p.registeredBy ? `<span style="font-size:11px;color:var(--text-tertiary);">📝 Registrado por: <strong>${p.registeredBy}</strong></span>` : '';
     return `<div class="team-row">
       <div class="team-info">
         <span class="team-name">${p.name}</span>
         <span class="team-players">Pareja: ${p.team} • ${catFull(p.cat, p.gender)}</span>
         <div class="player-line"><span class="badge badge-paid">✅ Pagó</span><span style="font-size:12px;color:var(--text-secondary);">${methodLabel}</span></div>
+        <div style="margin-top:4px;">${registeredByLabel}</div>
       </div>
       <div class="team-actions">
         <span class="badge badge-${p.cat}">${catLabels[p.cat]}</span>
@@ -2268,6 +2336,119 @@ function renderBalance() {
   }
   if (!catHtml) catHtml = '<div class="empty">No hay jugadores registrados</div>';
   document.getElementById('balance-by-category').innerHTML = catHtml;
+
+  // Renderizar tabla de caja por usuario
+  renderCashierTable();
+}
+
+function renderCashierTable() {
+  const el = document.getElementById('balance-by-cashier');
+  if (!el) return;
+
+  const amount = parseInt(document.getElementById('inscription-amount')?.value || '5000') || 0;
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
+  // Recolectar todos los pagos registrados
+  const payments = [];
+  teams.forEach(t => {
+    if (t.p1Paid) {
+      payments.push({
+        name: t.p1,
+        team: t.name,
+        method: t.p1Method || 'sin_metodo',
+        registeredBy: t.p1RegisteredBy || 'Sistema',
+        cat: t.cat,
+        gender: t.gender
+      });
+    }
+    if (t.p2Paid) {
+      payments.push({
+        name: t.p2,
+        team: t.name,
+        method: t.p2Method || 'sin_metodo',
+        registeredBy: t.p2RegisteredBy || 'Sistema',
+        cat: t.cat,
+        gender: t.gender
+      });
+    }
+  });
+
+  // Filtrar: usuarios invitados solo ven lo que ellos cargaron
+  let filteredPayments = payments;
+  if (!isAdmin) {
+    filteredPayments = payments.filter(p => p.registeredBy === currentUser?.username);
+  }
+
+  if (!filteredPayments.length) {
+    el.innerHTML = '<div class="empty">' + (isAdmin ? 'No hay pagos registrados' : 'No registraste ningún pago todavía') + '</div>';
+    return;
+  }
+
+  // Agrupar por usuario que registró y método
+  const byCashier = {};
+  filteredPayments.forEach(p => {
+    const cashier = p.registeredBy;
+    const method = p.method;
+    const key = cashier + '|' + method;
+    if (!byCashier[key]) {
+      byCashier[key] = { cashier, method, count: 0, total: 0, players: [] };
+    }
+    byCashier[key].count++;
+    byCashier[key].total += amount;
+    byCashier[key].players.push(p.name);
+  });
+
+  // También totales por cashier
+  const totalsByCashier = {};
+  filteredPayments.forEach(p => {
+    if (!totalsByCashier[p.registeredBy]) {
+      totalsByCashier[p.registeredBy] = { count: 0, total: 0 };
+    }
+    totalsByCashier[p.registeredBy].count++;
+    totalsByCashier[p.registeredBy].total += amount;
+  });
+
+  const methodLabels = { efectivo: '💵 Efectivo', transferencia: '🏦 Transferencia', mercadopago: '📱 Mercado Pago', sin_metodo: '❓ Sin método' };
+  const methodColors = { efectivo: '#16a34a', transferencia: '#1e40af', mercadopago: '#db2777', sin_metodo: '#6b7280' };
+
+  let htmlTable = '<div class="table-wrap"><table><thead><tr><th>Usuario que registró</th><th>Método</th><th>Cantidad</th><th>Total</th><th>Jugadores</th></tr></thead><tbody>';
+
+  Object.values(byCashier).forEach(row => {
+    const methodLabel = methodLabels[row.method] || row.method;
+    const methodColor = methodColors[row.method] || 'var(--text-secondary)';
+    const cashierBadge = row.cashier === currentUser?.username 
+      ? '<span class="badge" style="background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);">👤 Vos</span>'
+      : '<span class="badge badge-admin">🔐 ' + row.cashier + '</span>';
+
+    htmlTable += `<tr>
+      <td><div style="font-weight:800;font-size:13px;">${cashierBadge}</div></td>
+      <td><span style="color:${methodColor};font-weight:700;font-size:12px;">${methodLabel}</span></td>
+      <td style="font-weight:800;">${row.count}</td>
+      <td style="font-weight:900;color:var(--success);">$${row.total.toLocaleString('es-AR')}</td>
+      <td><span style="font-size:11px;color:var(--text-secondary);">${row.players.join(', ')}</span></td>
+    </tr>`;
+  });
+
+  htmlTable += '</tbody></table></div>';
+
+  // Totales por usuario
+  htmlTable += '<div style="margin-top:20px;padding:16px;background:var(--bg-dark);border-radius:var(--radius);border:2px solid var(--border);">';
+  htmlTable += '<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">📊 Totales por usuario</div>';
+
+  for (const [cashier, data] of Object.entries(totalsByCashier)) {
+    const isYou = cashier === currentUser?.username;
+    htmlTable += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-light);">
+      <div style="font-weight:700;font-size:14px;">${isYou ? '👤 Vos (' + cashier + ')' : '🔐 ' + cashier}</div>
+      <div style="text-align:right;">
+        <div style="font-size:16px;font-weight:900;color:var(--success);">$${data.total.toLocaleString('es-AR')}</div>
+        <div style="font-size:12px;color:var(--text-secondary);">${data.count} pagos</div>
+      </div>
+    </div>`;
+  }
+
+  htmlTable += '</div>';
+
+  el.innerHTML = htmlTable;
 }
 
 // ============================================
