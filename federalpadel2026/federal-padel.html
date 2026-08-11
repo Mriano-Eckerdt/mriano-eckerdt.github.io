@@ -282,7 +282,10 @@
           <label class="small" style="font-weight:700;margin-bottom:8px;display:block;">Usuario</label>
           <input type="text" class="input" id="login-username" placeholder="Tu usuario" style="margin-bottom:12px;" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()" />
           <label class="small" style="font-weight:700;margin-bottom:8px;display:block;">Contraseña</label>
-          <input type="password" class="input" id="login-password" placeholder="Tu contraseña" style="margin-bottom:16px;" onkeydown="if(event.key==='Enter')doLogin()" />
+          <input type="password" class="input" id="login-password" placeholder="Tu contraseña" style="margin-bottom:12px;" onkeydown="if(event.key==='Enter')doLogin()" />
+          <div style="text-align:right;margin-bottom:16px;">
+            <a href="#" onclick="showPasswordRecovery();return false;" style="font-size:12px;color:var(--accent);font-weight:700;text-decoration:none;">🔐 ¿Olvidaste tu contraseña?</a>
+          </div>
           <button class="btn btn-primary" style="width:100%;padding:14px;font-size:16px;" onclick="doLogin()">🔓 Ingresar</button>
           <div id="offline-login-msg" style="display:none;margin-top:16px;padding:12px;background:var(--warning-light);color:#92400e;border-radius:var(--radius-sm);font-size:13px;text-align:center;border:2px solid var(--warning);">
             ⚠️ Sin conexión a internet. Verificando credenciales locales...
@@ -297,6 +300,35 @@
       </div>
     </div>
 
+    <!-- MODAL RECUPERAR CONTRASEÑA -->
+    <div id="recovery-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;">
+      <div style="width:90%;max-width:420px;background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h2 style="font-size:18px;font-weight:900;color:var(--text);">🔐 Recuperar Contraseña</h2>
+          <button onclick="hidePasswordRecovery()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);">✕</button>
+        </div>
+        <div id="recovery-step-1">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Ingresá tu nombre de usuario para recuperar tu contraseña.</p>
+          <input type="text" class="input" id="recovery-username" placeholder="Tu usuario" style="margin-bottom:12px;" />
+          <button class="btn btn-primary" style="width:100%;" onclick="checkSecurityQuestion()">Continuar</button>
+        </div>
+        <div id="recovery-step-2" style="display:none;">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Pregunta de seguridad:</p>
+          <div id="recovery-question-display" style="padding:12px;background:var(--bg-dark);border-radius:var(--radius-sm);border:2px solid var(--border);font-weight:700;margin-bottom:12px;color:var(--text);"></div>
+          <input type="text" class="input" id="recovery-answer" placeholder="Tu respuesta" style="margin-bottom:12px;" />
+          <button class="btn btn-primary" style="width:100%;" onclick="verifySecurityAnswer()">Verificar</button>
+        </div>
+        <div id="recovery-step-3" style="display:none;">
+          <div style="padding:16px;background:var(--success-light);border-radius:var(--radius-sm);border:2px solid var(--success);text-align:center;">
+            <div style="font-size:14px;font-weight:700;color:var(--success);margin-bottom:8px;">✅ Tu contraseña es:</div>
+            <div id="recovery-password-display" style="font-size:20px;font-weight:900;color:var(--text);font-family:monospace;background:var(--bg);padding:12px;border-radius:var(--radius-sm);border:2px solid var(--border);"></div>
+          </div>
+          <button class="btn btn-secondary" style="width:100%;margin-top:12px;" onclick="hidePasswordRecovery()">Cerrar</button>
+        </div>
+        <div id="recovery-error" style="display:none;margin-top:12px;padding:10px;background:var(--danger-light);color:var(--danger);border-radius:var(--radius-sm);font-size:12px;font-weight:700;text-align:center;"></div>
+      </div>
+    </div>
+
     <!-- PANTALLA DE CONFIGURACIÓN INICIAL -->
     <div id="setup-screen" class="setup-screen">
       <div style="width:100%;max-width:420px;">
@@ -308,13 +340,19 @@
         <div class="card" style="padding:24px;">
           <div style="margin-bottom:16px;padding:12px;background:var(--warning-light);color:#92400e;border-radius:var(--radius-sm);font-size:13px;font-weight:700;text-align:center;border:2px solid var(--warning);">
             ⚠️ Primera vez en este dispositivo<br>
-            Creá el primer usuario administrador.
+            Creá el primer usuario Super Admin.
           </div>
-          <label class="small" style="font-weight:700;margin-bottom:8px;display:block;">Nombre de usuario (admin)</label>
+          <label class="small" style="font-weight:700;margin-bottom:8px;display:block;">Nombre de usuario (Super Admin)</label>
           <input type="text" class="input" id="setup-username" placeholder="Ej: mariano" style="margin-bottom:12px;" />
           <label class="small" style="font-weight:700;margin-bottom:8px;display:block;">Contraseña</label>
-          <input type="password" class="input" id="setup-password" placeholder="Creá una contraseña segura" style="margin-bottom:16px;" />
-          <button class="btn btn-primary" style="width:100%;padding:14px;font-size:16px;" onclick="completeSetup()">🔐 Crear Administrador y Entrar</button>
+          <input type="password" class="input" id="setup-password" placeholder="Creá una contraseña segura" style="margin-bottom:12px;" />
+          <label class="small" style="font-weight:700;margin-bottom:8px;display:block;">🔐 Pregunta de seguridad (para recuperar contraseña)</label>
+          <input type="text" class="input" id="setup-security-question" placeholder="Ej: ¿Cuál es el nombre de mi perro?" style="margin-bottom:8px;" />
+          <input type="text" class="input" id="setup-security-answer" placeholder="Respuesta a la pregunta de seguridad" style="margin-bottom:16px;" />
+          <div style="margin-bottom:16px;padding:10px;background:var(--accent-light);border-radius:var(--radius-sm);font-size:12px;color:var(--accent);font-weight:600;">
+            💡 La pregunta de seguridad te permite recuperar tu contraseña si la olvidás.
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:14px;font-size:16px;" onclick="completeSetup()">🔐 Crear Super Admin y Entrar</button>
           <div id="setup-error" style="display:none;margin-top:12px;padding:10px;background:var(--danger-light);color:var(--danger);border-radius:var(--radius-sm);font-size:12px;font-weight:700;text-align:center;"></div>
         </div>
       </div>
@@ -857,6 +895,8 @@ function validateSession() {
 function completeSetup() {
   const username = document.getElementById('setup-username').value.trim().toLowerCase();
   const password = document.getElementById('setup-password').value.trim();
+  const securityQuestion = document.getElementById('setup-security-question').value.trim();
+  const securityAnswer = document.getElementById('setup-security-answer').value.trim().toLowerCase();
   const errorEl = document.getElementById('setup-error');
 
   if (!username || !password) {
@@ -874,10 +914,21 @@ function completeSetup() {
     errorEl.style.display = 'block';
     return;
   }
+  if (!securityQuestion || !securityAnswer) {
+    errorEl.textContent = '⚠️ Completá la pregunta y respuesta de seguridad.';
+    errorEl.style.display = 'block';
+    return;
+  }
 
   // Crear SUPER ADMIN (el primer usuario siempre es superadmin)
   const token = generateToken();
-  users[username] = { password: password, role: 'superadmin', createdAt: Date.now() };
+  users[username] = { 
+    password: password, 
+    role: 'superadmin', 
+    createdAt: Date.now(),
+    securityQuestion: securityQuestion,
+    securityAnswer: securityAnswer
+  };
   currentUser = { username: username, role: 'superadmin', token: token };
 
   localStorage.setItem('fp_users', JSON.stringify(users));
@@ -1109,6 +1160,8 @@ function createUser() {
   const username = document.getElementById('new-user-username').value.trim().toLowerCase();
   const password = document.getElementById('new-user-password').value.trim();
   const role = document.getElementById('new-user-role').value;
+  const securityQuestion = document.getElementById('new-user-security-question').value.trim();
+  const securityAnswer = document.getElementById('new-user-security-answer').value.trim().toLowerCase();
   const msgEl = document.getElementById('create-user-msg');
 
   if (!username || !password) {
@@ -1132,12 +1185,26 @@ function createUser() {
     return;
   }
 
-  users[username] = { password: password, role: role, createdAt: Date.now(), createdBy: currentUser.username };
+  const userData = { 
+    password: password, 
+    role: role, 
+    createdAt: Date.now(), 
+    createdBy: currentUser.username 
+  };
+
+  if (securityQuestion && securityAnswer) {
+    userData.securityQuestion = securityQuestion;
+    userData.securityAnswer = securityAnswer;
+  }
+
+  users[username] = userData;
   localStorage.setItem('fp_users', JSON.stringify(users));
   saveUsersToFirebase();
 
   document.getElementById('new-user-username').value = '';
   document.getElementById('new-user-password').value = '';
+  document.getElementById('new-user-security-question').value = '';
+  document.getElementById('new-user-security-answer').value = '';
   msgEl.innerHTML = '<span style="color:var(--success);">✅ Usuario creado: ' + username + ' (' + (role === 'admin' ? 'Admin' : 'Usuario') + ')</span>';
   renderUsersList();
   setTimeout(() => msgEl.innerHTML = '', 3000);
@@ -1206,6 +1273,123 @@ function kickUser(username) {
   }
   alert('👢 Usuario "' + username + '" desconectado.');
   renderUsersList();
+}
+
+// ============================================
+// RECUPERACIÓN DE CONTRASEÑA
+// ============================================
+function showPasswordRecovery() {
+  document.getElementById('recovery-modal').style.display = 'flex';
+  document.getElementById('recovery-step-1').style.display = 'block';
+  document.getElementById('recovery-step-2').style.display = 'none';
+  document.getElementById('recovery-step-3').style.display = 'none';
+  document.getElementById('recovery-error').style.display = 'none';
+  document.getElementById('recovery-username').value = '';
+  document.getElementById('recovery-answer').value = '';
+}
+
+function hidePasswordRecovery() {
+  document.getElementById('recovery-modal').style.display = 'none';
+}
+
+function checkSecurityQuestion() {
+  const username = document.getElementById('recovery-username').value.trim().toLowerCase();
+  const errorEl = document.getElementById('recovery-error');
+
+  if (!username) {
+    errorEl.textContent = '⚠️ Ingresá tu usuario.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const user = users[username];
+  if (!user) {
+    errorEl.textContent = '❌ Usuario no encontrado.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (!user.securityQuestion) {
+    errorEl.textContent = '❌ Este usuario no tiene pregunta de seguridad configurada.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('recovery-question-display').textContent = user.securityQuestion;
+  document.getElementById('recovery-step-1').style.display = 'none';
+  document.getElementById('recovery-step-2').style.display = 'block';
+  document.getElementById('recovery-error').style.display = 'none';
+}
+
+function verifySecurityAnswer() {
+  const username = document.getElementById('recovery-username').value.trim().toLowerCase();
+  const answer = document.getElementById('recovery-answer').value.trim().toLowerCase();
+  const errorEl = document.getElementById('recovery-error');
+
+  const user = users[username];
+  if (!user) {
+    errorEl.textContent = '❌ Error inesperado.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (answer !== user.securityAnswer) {
+    errorEl.textContent = '❌ Respuesta incorrecta.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('recovery-password-display').textContent = user.password;
+  document.getElementById('recovery-step-2').style.display = 'none';
+  document.getElementById('recovery-step-3').style.display = 'block';
+  document.getElementById('recovery-error').style.display = 'none';
+}
+
+// ============================================
+// CAMBIAR CONTRASEÑA
+// ============================================
+function changePassword() {
+  const currentPass = document.getElementById('change-current-pass').value;
+  const newPass = document.getElementById('change-new-pass').value;
+  const confirmPass = document.getElementById('change-confirm-pass').value;
+  const msgEl = document.getElementById('change-pass-msg');
+
+  if (!currentPass || !newPass || !confirmPass) {
+    msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Completá todos los campos</span>';
+    return;
+  }
+
+  const user = users[currentUser.username];
+  if (!user || user.password !== currentPass) {
+    msgEl.innerHTML = '<span style="color:var(--danger);">❌ Contraseña actual incorrecta</span>';
+    return;
+  }
+
+  if (newPass.length < 4) {
+    msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ La nueva contraseña debe tener al menos 4 caracteres</span>';
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Las contraseñas nuevas no coinciden</span>';
+    return;
+  }
+
+  user.password = newPass;
+  localStorage.setItem('fp_users', JSON.stringify(users));
+  saveUsersToFirebase();
+
+  msgEl.innerHTML = '<span style="color:var(--success);">✅ Contraseña cambiada correctamente</span>';
+  document.getElementById('change-current-pass').value = '';
+  document.getElementById('change-new-pass').value = '';
+  document.getElementById('change-confirm-pass').value = '';
+  setTimeout(() => msgEl.innerHTML = '', 3000);
+}
+
+function showUserPassword(username) {
+  const user = users[username];
+  if (!user) return;
+  alert('🔐 Contraseña de "' + username + '": ' + user.password);
 }
 
 function renderUsersList() {
