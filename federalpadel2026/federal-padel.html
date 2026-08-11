@@ -616,10 +616,12 @@
           <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">➕ Nuevo Usuario</div>
           <input type="text" class="input" id="new-user-username" placeholder="Nombre de usuario" style="margin-bottom:10px;" />
           <input type="password" class="input" id="new-user-password" placeholder="Contraseña" style="margin-bottom:10px;" />
-          <select class="select" id="new-user-role" style="margin-bottom:12px;">
+          <select class="select" id="new-user-role" style="margin-bottom:10px;">
             <option value="user">👤 Usuario (carga resultados, no modifica lo existente)</option>
             <option value="admin">🔐 Administrador (acceso total)</option>
           </select>
+          <input type="text" class="input" id="new-user-security-question" placeholder="Pregunta de seguridad (opcional)" style="margin-bottom:10px;" />
+          <input type="text" class="input" id="new-user-security-answer" placeholder="Respuesta de seguridad (opcional)" style="margin-bottom:12px;" />
           <div class="actions">
             <button class="btn btn-primary" onclick="createUser()">➕ Crear Usuario</button>
           </div>
@@ -640,13 +642,21 @@
         <p class="card-subtitle">Solo visible para administradores.</p>
         <div id="admin-only-content">
           <div style="margin-bottom:20px;padding:14px;background:var(--success-light);border-radius:var(--radius-sm);border-left:4px solid var(--success);">
-            <div style="font-size:13px;font-weight:700;color:var(--success);">✅ Estás logueado como ADMINISTRADOR</div>
+            <div id="admin-role-display" style="font-size:13px;font-weight:700;color:var(--success);">✅ Estás logueado como ADMINISTRADOR</div>
           </div>
           <div style="padding:16px;border:2px solid var(--border);border-radius:var(--radius);background:var(--bg-card);">
             <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">🚪 Sesión</div>
             <div class="actions">
               <button class="btn btn-danger" onclick="logout()">🔒 Cerrar Sesión</button>
             </div>
+          </div>
+          <div style="padding:16px;border:2px solid var(--border);border-radius:var(--radius);background:var(--bg-card);margin-top:16px;">
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px;">🔐 Cambiar Mi Contraseña</div>
+            <input type="password" class="input" id="change-current-pass" placeholder="Contraseña actual" style="margin-bottom:10px;" />
+            <input type="password" class="input" id="change-new-pass" placeholder="Nueva contraseña" style="margin-bottom:10px;" />
+            <input type="password" class="input" id="change-confirm-pass" placeholder="Confirmar nueva contraseña" style="margin-bottom:12px;" />
+            <button class="btn btn-primary" onclick="changePassword()" style="width:100%;">🔐 Cambiar Contraseña</button>
+            <div id="change-pass-msg" style="margin-top:8px;font-size:12px;font-weight:600;"></div>
           </div>
         </div>
       </div>
@@ -1048,6 +1058,18 @@ function enterApp() {
   renderAll();
   loadCoverPhoto();
 
+  // Actualizar texto del panel admin
+  const adminRoleDisplay = document.getElementById('admin-role-display');
+  if (adminRoleDisplay) {
+    if (currentUser.role === 'superadmin') {
+      adminRoleDisplay.textContent = '✅ Estás logueado como SUPER ADMINISTRADOR';
+    } else if (currentUser.role === 'admin') {
+      adminRoleDisplay.textContent = '✅ Estás logueado como ADMINISTRADOR';
+    } else {
+      adminRoleDisplay.textContent = '✅ Estás logueado como USUARIO';
+    }
+  }
+
   // Ajustar select de roles según quién está logueado
   adjustRoleSelect();
 }
@@ -1440,6 +1462,7 @@ function renderUsersList() {
         </div>
       </div>
       <div style="display:flex;gap:6px;">
+        ${currentUser?.role === 'superadmin' ? `<button class="btn btn-secondary btn-sm" onclick="showUserPassword('${u.username}')">🔐 Ver pass</button>` : ''}
         ${u.isOnline && canKick ? `<button class="btn btn-warning btn-sm" onclick="kickUser('${u.username}')">👢 Desconectar</button>` : ''}
         ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.username}')">🗑️ Eliminar</button>` : ''}
       </div>
