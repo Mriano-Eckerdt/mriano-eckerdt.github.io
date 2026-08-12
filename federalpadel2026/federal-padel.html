@@ -1460,15 +1460,23 @@ function renderUsersList() {
 
   const sessions = window.onlineSessions || {};
   const now = Date.now();
-  const userList = Object.keys(users).map(u => {
+  let userList = Object.keys(users).map(u => {
     const session = sessions[u];
     const isOnline = session && session.online && (now - session.lastSeen < 60000);
     const lastSeen = session && session.lastSeen ? new Date(session.lastSeen).toLocaleTimeString('es-AR') : 'Nunca';
     return { username: u, ...users[u], isOnline, lastSeen };
   });
 
+  // Filtrar según jerarquía:
+  // Super Admin ve TODOS
+  // Admin solo ve Admin y Usuario (NO ve Super Admin)
+  // Usuario no llega acá porque no ve la pestaña
+  if (currentUser?.role === 'admin') {
+    userList = userList.filter(u => u.role !== 'superadmin');
+  }
+
   if (!userList.length) {
-    el.innerHTML = '<div class="empty">No hay usuarios registrados</div>';
+    el.innerHTML = '<div class="empty">No hay usuarios registrados en tu nivel de acceso</div>';
     return;
   }
 
