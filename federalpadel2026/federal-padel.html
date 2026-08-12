@@ -133,10 +133,16 @@
     .badge-5ta { background: #cffafe; color: #0e7490; }
     .badge-6ta { background: var(--accent-light); color: var(--accent); }
     .badge-7ma { background: var(--danger-light); color: var(--danger); }
+    .badge-suma5 { background: #e0f2fe; color: #0369a1; }
+    .badge-suma6 { background: #fef9c3; color: #a16207; }
+    .badge-suma9 { background: #f0fdf4; color: #15803d; }
+    .badge-suma10 { background: #faf5ff; color: #7e22ce; }
+    .badge-suma13 { background: #fff7ed; color: #c2410c; }
     .badge-paid { background: var(--success-light); color: var(--success); border: 1px solid var(--success); }
     .badge-unpaid { background: var(--warning-light); color: #92400e; border: 1px solid var(--warning); }
     .badge-cab { background: #dbeafe; color: #1e40af; }
     .badge-dam { background: var(--pink-light); color: var(--pink); }
+    .badge-mix { background: #f0abfc; color: #701a75; }
     .badge-admin { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
     .badge-user { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); }
 
@@ -224,6 +230,7 @@
     }
     .gender-btn.active-cab { background: #dbeafe; color: #1e40af; border-color: #1e40af; }
     .gender-btn.active-dam { background: var(--pink-light); color: var(--pink); border-color: var(--pink); }
+    .gender-btn.active-mix { background: #f0abfc; color: #701a75; border-color: #701a75; }
     .gender-btn.active-all { background: var(--text); color: var(--bg); border-color: var(--text); }
 
     .user-row {
@@ -405,6 +412,7 @@
           <select class="select" id="gender">
             <option value="cab">👨 Caballeros</option>
             <option value="dam">👩 Damas</option>
+            <option value="mix">👫 Mixto</option>
           </select>
           <select class="select" id="cat">
             <option value="1ra">1ra</option>
@@ -414,6 +422,11 @@
             <option value="5ta">5ta</option>
             <option value="6ta">6ta</option>
             <option value="7ma">7ma</option>
+            <option value="suma5">Suma 5</option>
+            <option value="suma6">Suma 6</option>
+            <option value="suma9">Suma 9</option>
+            <option value="suma10">Suma 10</option>
+            <option value="suma13">Suma 13</option>
           </select>
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
@@ -455,6 +468,7 @@
         <button class="gender-btn active-all" onclick="filterGender('all')">🏆 Todos</button>
         <button class="gender-btn" onclick="filterGender('cab')">👨 Caballeros</button>
         <button class="gender-btn" onclick="filterGender('dam')">👩 Damas</button>
+        <button class="gender-btn" onclick="filterGender('mix')">👫 Mixto</button>
       </div>
       <div class="filter-tabs">
         <button class="filter-tab active" onclick="filterTeams('all')">📋 Todos</button>
@@ -491,6 +505,7 @@
           <select class="select" id="zone-gender">
             <option value="cab">👨 Caballeros</option>
             <option value="dam">👩 Damas</option>
+            <option value="mix">👫 Mixto</option>
           </select>
           <select class="select" id="zone-cat">
             <option value="1ra">1ra</option>
@@ -500,6 +515,11 @@
             <option value="5ta">5ta</option>
             <option value="6ta">6ta</option>
             <option value="7ma">7ma</option>
+            <option value="suma5">Suma 5</option>
+            <option value="suma6">Suma 6</option>
+            <option value="suma9">Suma 9</option>
+            <option value="suma10">Suma 10</option>
+            <option value="suma13">Suma 13</option>
           </select>
         </div>
         <div class="actions">
@@ -1099,9 +1119,12 @@ function logout() {
   if (usersListener) { try { usersListener.off(); } catch(e){} }
   if (kickListener) { try { kickListener.off(); } catch(e){} }
 
-  // Eliminar sesión de Firebase
+  // Marcar sesión como offline (no borrar, para conservar última vez visto)
   if (firebaseDb && currentUser) {
-    firebaseDb.ref('fp2026_sessions/' + currentUser.username).remove();
+    firebaseDb.ref('fp2026_sessions/' + currentUser.username).update({
+      online: false,
+      lastSeen: Date.now()
+    });
   }
 
   localStorage.removeItem('fp_currentUser');
@@ -1423,7 +1446,7 @@ function renderUsersList() {
   const userList = Object.keys(users).map(u => {
     const session = sessions[u];
     const isOnline = session && session.online && (now - session.lastSeen < 60000);
-    const lastSeen = session ? new Date(session.lastSeen).toLocaleTimeString('es-AR') : 'Nunca';
+    const lastSeen = session && session.lastSeen ? new Date(session.lastSeen).toLocaleTimeString('es-AR') : 'Nunca';
     return { username: u, ...users[u], isOnline, lastSeen };
   });
 
@@ -1473,8 +1496,8 @@ function renderUsersList() {
 // ============================================
 // TORNEO - FUNCIONES AUXILIARES
 // ============================================
-const catLabels = { '1ra': '1ra', '2da': '2da', '3ra': '3ra', '4ta': '4ta', '5ta': '5ta', '6ta': '6ta', '7ma': '7ma' };
-const genderLabels = { 'cab': 'Caballeros', 'dam': 'Damas' };
+const catLabels = { '1ra': '1ra', '2da': '2da', '3ra': '3ra', '4ta': '4ta', '5ta': '5ta', '6ta': '6ta', '7ma': '7ma', 'suma5': 'Suma 5', 'suma6': 'Suma 6', 'suma9': 'Suma 9', 'suma10': 'Suma 10', 'suma13': 'Suma 13' };
+const genderLabels = { 'cab': 'Caballeros', 'dam': 'Damas', 'mix': 'Mixto' };
 const paymentMethods = { 'efectivo': '💵 Efectivo', 'transferencia': '🏦 Transferencia', 'mercadopago': '📱 Mercado Pago' };
 let teamFilter = 'all';
 let genderFilter = 'all';
@@ -1693,17 +1716,15 @@ function applyUserRestrictions() {
 
   // Admin: puede modificar TODO excepto gestionar usuarios admin (eso es en la pestaña Usuarios)
   if (currentUser?.role === 'admin') {
-    // Los admins pueden hacer casi todo, solo ocultamos el banner de usuario
     const banner = document.getElementById('user-banner');
     if (banner) banner.style.display = 'none';
     return;
   }
 
-  // Usuario normal: puede cargar datos nuevos, NO modificar lo existente
-  document.querySelectorAll('.score-input').forEach(el => {
-    const val = el.value;
-    el.disabled = (val !== '' && val !== null && val !== undefined && val !== '0');
-  });
+  // Usuario invitado: SOLO puede cargar resultados de partidos y registrar pagos
+  // NO puede: crear equipos, zonas, canchas, generar fixtures, asignar horarios/canchas
+
+  // 1. Ocultar botones de acciones administrativas
   document.querySelectorAll('.team-actions .btn-danger, .team-actions .btn-secondary').forEach(el => el.style.display = 'none');
   const clearBtn = document.querySelector('button[onclick="clearTeams()"]');
   if (clearBtn) clearBtn.style.display = 'none';
@@ -1711,15 +1732,50 @@ function applyUserRestrictions() {
   if (clearGroupBtn) clearGroupBtn.style.display = 'none';
   const clearKnockBtn = document.querySelector('button[onclick="clearKnockout()"]');
   if (clearKnockBtn) clearKnockBtn.style.display = 'none';
-  // Los usuarios invitados SÍ pueden registrar pagos (verán solo lo suyo en Caja por Usuario)
-  // document.querySelectorAll('button[onclick^="togglePlayerPayment"]').forEach(el => el.style.display = 'none');
-  // document.querySelectorAll('.payment-method-select').forEach(el => el.style.display = 'none');
+
+  // 2. Ocultar formulario de nueva pareja
+  const newTeamCard = document.querySelector('#tab-teams .card:first-child');
+  if (newTeamCard) newTeamCard.style.display = 'none';
+
+  // 3. Ocultar formulario de nueva cancha
+  const newCourtCard = document.querySelector('#tab-courts .card:first-child');
+  if (newCourtCard) newCourtCard.style.display = 'none';
+
+  // 4. Ocultar formulario de nueva zona
+  const newZoneCard = document.querySelector('#tab-zones .card:first-child');
+  if (newZoneCard) newZoneCard.style.display = 'none';
+
+  // 5. Ocultar botones de generar fixture y eliminatorias
+  const genGroupBtn = document.querySelector('button[onclick="generateGroupFixture()"]');
+  if (genGroupBtn) genGroupBtn.style.display = 'none';
+  const genKnockBtn = document.querySelector('button[onclick="generateKnockout()"]');
+  if (genKnockBtn) genKnockBtn.style.display = 'none';
+
+  // 6. Deshabilitar selects de cancha y horario (solo admin/superadmin pueden asignar)
+  document.querySelectorAll('.payment-method-select').forEach(el => {
+    if (el.querySelector('option[value=""]') && el.querySelector('option[value=""]').textContent.includes('Cancha')) {
+      el.disabled = true;
+      el.style.opacity = '0.5';
+    }
+  });
+  document.querySelectorAll('input[type="time"]').forEach(el => {
+    el.disabled = true;
+    el.style.opacity = '0.5';
+  });
+
+  // 7. Score inputs: permitir cargar nuevos, NO modificar existentes
+  document.querySelectorAll('.score-input').forEach(el => {
+    const val = el.value;
+    el.disabled = (val !== '' && val !== null && val !== undefined && val !== '0');
+  });
+
+  // 8. Banner informativo
   let banner = document.getElementById('user-banner');
   if (!banner) {
     banner = document.createElement('div');
     banner.id = 'user-banner';
     banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--accent-light);color:var(--accent);padding:10px;text-align:center;font-weight:800;font-size:13px;z-index:9999;border-top:2px solid var(--accent);';
-    banner.innerHTML = '👤 Modo Usuario — Podés cargar datos nuevos y registrar pagos. No podés modificar lo ya cargado por otros.';
+    banner.innerHTML = '👤 Modo Usuario — Podés cargar resultados nuevos y registrar pagos. No podés crear equipos, zonas, canchas ni generar fixtures.';
     document.body.appendChild(banner);
   }
   banner.style.display = 'block';
@@ -1843,7 +1899,7 @@ function renderTeams() {
 
   list.innerHTML = filtered.map(t => {
     const z = zones.find(zn => zn.id === t.zoneId);
-    const genderBadge = t.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
+    const genderBadge = t.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : t.gender === 'mix' ? '<span class="badge badge-mix">👫 Mixto</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
     const p1Img = t.p1Photo ? `<img src="${t.p1Photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border);margin-right:6px;" />` : '';
     const p2Img = t.p2Photo ? `<img src="${t.p2Photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border);margin-right:6px;" />` : '';
     return `<div class="team-row">
@@ -2435,7 +2491,7 @@ function renderPending() {
   });
   if (!pending.length) { list.innerHTML = '<div class="empty">🎉 ¡Todos los jugadores pagaron!</div>'; return; }
   list.innerHTML = pending.map(p => {
-    const genderBadge = p.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
+    const genderBadge = p.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : p.gender === 'mix' ? '<span class="badge badge-mix">👫 Mixto</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
     return `<div class="team-row">
       <div class="team-info">
         <span class="team-name">${p.name}</span>
@@ -2464,7 +2520,7 @@ function renderPaid() {
   paid.sort((a, b) => (a.method || '').localeCompare(b.method || ''));
   list.innerHTML = paid.map(p => {
     const methodLabel = p.method ? (paymentMethods[p.method] || p.method) : '💵 Sin método';
-    const genderBadge = p.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
+    const genderBadge = p.gender === 'dam' ? '<span class="badge badge-dam">👩 Damas</span>' : p.gender === 'mix' ? '<span class="badge badge-mix">👫 Mixto</span>' : '<span class="badge badge-cab">👨 Caballeros</span>';
     const registeredByLabel = p.registeredBy ? `<span style="font-size:11px;color:var(--text-tertiary);">📝 Registrado por: <strong>${p.registeredBy}</strong></span>` : '';
     return `<div class="team-row">
       <div class="team-info">
