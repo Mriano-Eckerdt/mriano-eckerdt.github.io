@@ -907,7 +907,7 @@ function validateSession() {
   // Verificar en Firebase si la sesión sigue activa
   firebaseDb.ref('fp2026_sessions/' + currentUser.username).once('value', snap => {
     const session = snap.val();
-    if (session && session.token === currentUser.token) {
+    if (session && session.online === true && session.token === currentUser.token) {
       enterApp();
     } else {
       // Sesión inválida o kickeada
@@ -946,6 +946,13 @@ function completeSetup() {
   }
   if (!securityQuestion || !securityAnswer) {
     errorEl.textContent = '⚠️ Completá la pregunta y respuesta de seguridad.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  // Verificar que no haya usuarios existentes (por si Firebase ya tiene datos)
+  if (Object.keys(users).length > 0) {
+    errorEl.textContent = '⚠️ Ya existen usuarios configurados. No se puede crear otro Super Admin.';
     errorEl.style.display = 'block';
     return;
   }
@@ -1134,7 +1141,8 @@ function logout() {
 
 function saveUsersToFirebase() {
   if (!firebaseDb) return;
-  firebaseDb.ref('fp2026_users').set(users).catch(e => console.error('Error guardando users:', e));
+  // Usar .update() para no sobreescribir usuarios de otros dispositivos
+  firebaseDb.ref('fp2026_users').update(users).catch(e => console.error('Error guardando users:', e));
 }
 
 function saveSessionToFirebase() {
@@ -1189,7 +1197,8 @@ function listenToUsers() {
   firebaseDb.ref('fp2026_users').on('value', snap => {
     const cloudUsers = snap.val();
     if (cloudUsers) {
-      users = cloudUsers;
+      // Fusionar: la nube tiene prioridad pero no borrar locales recién creados
+      users = { ...users, ...cloudUsers };
       localStorage.setItem('fp_users', JSON.stringify(users));
     }
   });
@@ -1211,6 +1220,14 @@ function createUser() {
 
   if (!username || !password) {
     msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Completá todos los campos</span>';
+    return;
+  }
+  if (username.length < 3) {
+    msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ El usuario debe tener al menos 3 caracteres</span>';
+    return;
+  }
+  if (password.length < 4) {
+    msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ La contraseña debe tener al menos 4 caracteres</span>';
     return;
   }
   if (users[username]) {
