@@ -299,7 +299,7 @@
           </div>
         </div>
         <div style="text-align:center;margin-top:20px;font-size:12px;color:var(--text-tertiary);">
-          Federal Padel 2026 v2.0 • Acceso restringido
+          Federal Padel 2026 v2.1 • Acceso restringido
         </div>
         <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text-tertiary);font-weight:600;">
           © 2026 Eckerdt Mariano. Todos los derechos reservados.
@@ -762,7 +762,7 @@
 
     <footer>
       <p>Creado por <strong>Eckerdt Mariano</strong></p>
-      <p class="small" style="margin-top:4px;">Federal Padel 2026 v2.0</p>
+      <p class="small" style="margin-top:4px;">Federal Padel 2026 v2.1</p>
       <p class="small" style="margin-top:4px;">© 2026 Eckerdt Mariano. Todos los derechos reservados.</p>
     </footer>
   </div>
@@ -808,6 +808,10 @@ let heartbeatInterval = null;
 let usersListener = null;
 let kickListener = null;
 
+function emailForUsername(username) {
+  return username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@federalpadel2026.app';
+}
+
 // Verificar si la URL tiene ?app para forzar login
 const urlParams = new URLSearchParams(window.location.search);
 const forceLogin = urlParams.has('app');
@@ -820,6 +824,7 @@ function initFirebase() {
   try {
     if (typeof firebase === 'undefined' || !firebase.apps) {
       console.log('Firebase no disponible (modo offline)');
+      decideInitialScreen();
       return;
     }
     if (!firebase.apps.length) {
@@ -828,70 +833,85 @@ function initFirebase() {
       firebaseApp = firebase.app();
     }
     firebaseDb = firebase.database();
-    firebase.auth().signInAnonymously().then(() => {
-      console.log('Firebase Auth: OK');
-      firebaseConnected = true;
-      setSyncStatus('ok', '✅ Conectado a Firebase');
-      // Verificar usuarios en la nube
-      checkCloudUsers();
-      // Si hay sesión activa, iniciar heartbeat y listeners
-      if (currentUser) {
-        startHeartbeat();
-        listenToKicks();
-        listenToUsers();
-      }
-    }).catch(err => {
-      console.error('Firebase Auth error:', err);
-      setSyncStatus('error', '⚠️ Firebase offline');
-    });
-
-    // Monitorear conexión
-    firebaseDb.ref('.info/connected').on('value', snap => {
-      firebaseConnected = snap.val() === true;
-      if (firebaseConnected) {
-        setSyncStatus('ok', '✅ Conectado');
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        console.log('Firebase Auth: UID', user.uid);
+        firebaseConnected = true;
+        setSyncStatus('ok', '✅ Conectado a Firebase');
+        checkCloudUsers();
+        if (currentUser) {
+          startHeartbeat();
+          listenToKicks();
+          listenToUsers();
+        }
       } else {
+        console.log('Firebase Auth: No user');
+        firebaseConnected = false;
+        setSyncStatus('idle', 'Esperando login...');
+        decideInitialScreen();
+      }
+    });
+    firebaseDb.ref('.info/connected').on('value', snap => {
+      const connected = snap.val() === true;
+      if (connected && firebase.auth().currentUser) {
+        setSyncStatus('ok', '✅ Conectado');
+      } else if (!connected) {
         setSyncStatus('idle', 'Sin conexión');
       }
     });
   } catch(e) {
     console.error('Firebase error:', e);
     firebaseDb = null;
+    decideInitialScreen();
   }
 }
 
 function checkCloudUsers() {
-  if (!firebaseDb) return;
-  firebaseDb.ref('fp2026_users').once('value', snap => {
-    const cloudUsers = snap.val();
-    if (cloudUsers) {
-      // Fusionar con locales (la nube tiene prioridad)
-      users = { ...users, ...cloudUsers };
-      localStorage.setItem('fp_users', JSON.stringify(users));
-      console.log('Usuarios descargados de Firebase:', Object.keys(cloudUsers).length);
+  if (!firebaseDb || !firebase.auth().currentUser) {
+    decideInitialScreen();
+    return;
+  }
+  const currentUid = firebase.auth().currentUser.uid;
+  firebaseDb.ref('fp2026_userProfiles').once('value', snap => {
+    const profiles = snap.val() || {};
+    let migrated = false;
+    Object.entries(profiles).forEach(([uid, profile]) => {
+      if (profile.username && !users[profile.username]) {
+        users[profile.username] = {
+          password: profile.password || '',
+          role: profile.role,
+          createdAt: profile.createdAt,
+          createdBy: profile.createdBy,
+          securityQuestion: profile.securityQuestion,
+          securityAnswer: profile.securityAnswer
+        };
+        migrated = true;
+      }
+    });
+    if (migrated) localStorage.setItem('fp_users', JSON.stringify(users));
+    const myProfile = profiles[currentUid];
+    if (myProfile && currentUser && currentUser.username !== myProfile.username) {
+      currentUser.username = myProfile.username;
+      currentUser.role = myProfile.role;
+      currentUser.uid = currentUid;
+      localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
     }
-    // Ahora decidir qué pantalla mostrar
     decideInitialScreen();
-  }).catch(() => {
-    // Sin internet, usar locales
-    decideInitialScreen();
-  });
+  }).catch(() => decideInitialScreen());
 }
 
 function decideInitialScreen() {
   const hasUsers = Object.keys(users).length > 0;
   const hasSession = currentUser !== null;
-
+  const firebaseUser = firebase.auth() ? firebase.auth().currentUser : null;
+  if (firebaseUser && hasSession && !forceLogin) {
+    validateSession();
+    return;
+  }
   if (hasUsers) {
-    // Hay usuarios configurados → mostrar login
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('setup-screen').style.display = 'none';
-    if (hasSession && !forceLogin) {
-      // Verificar si la sesión sigue siendo válida (no fue kickeada)
-      validateSession();
-    }
   } else {
-    // No hay usuarios → mostrar setup inicial
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('setup-screen').style.display = 'flex';
   }
@@ -899,27 +919,23 @@ function decideInitialScreen() {
 
 function validateSession() {
   if (!currentUser) return;
-  if (!firebaseDb) {
-    // Modo offline, aceptar sesión local
+  if (!firebaseDb || !firebase.auth().currentUser) {
     enterApp();
     return;
   }
-  // Verificar en Firebase si la sesión sigue activa
-  firebaseDb.ref('fp2026_sessions/' + currentUser.username).once('value', snap => {
+  const uid = firebase.auth().currentUser.uid;
+  firebaseDb.ref('fp2026_sessions/' + uid).once('value', snap => {
     const session = snap.val();
     if (session && session.online === true && session.token === currentUser.token) {
       enterApp();
     } else {
-      // Sesión inválida o kickeada
       localStorage.removeItem('fp_currentUser');
       currentUser = null;
+      firebase.auth().signOut().catch(()=>{});
       document.getElementById('login-screen').style.display = 'flex';
       showLoginError('⚠️ Tu sesión fue cerrada por un administrador.');
     }
-  }).catch(() => {
-    // Sin internet, confiar en local
-    enterApp();
-  });
+  }).catch(() => enterApp());
 }
 
 function completeSetup() {
@@ -949,34 +965,44 @@ function completeSetup() {
     errorEl.style.display = 'block';
     return;
   }
-
-  // Verificar que no haya usuarios existentes (por si Firebase ya tiene datos)
   if (Object.keys(users).length > 0) {
     errorEl.textContent = '⚠️ Ya existen usuarios configurados. No se puede crear otro Super Admin.';
     errorEl.style.display = 'block';
     return;
   }
-
-  // Crear SUPER ADMIN (el primer usuario siempre es superadmin)
-  const token = generateToken();
-  users[username] = { 
-    password: password, 
-    role: 'superadmin', 
-    createdAt: Date.now(),
-    securityQuestion: securityQuestion,
-    securityAnswer: securityAnswer
-  };
-  currentUser = { username: username, role: 'superadmin', token: token };
-
-  localStorage.setItem('fp_users', JSON.stringify(users));
-  localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
-
-  // Guardar en Firebase
-  saveUsersToFirebase();
-  saveSessionToFirebase();
-
-  document.getElementById('setup-screen').style.display = 'none';
-  enterApp();
+  if (!firebaseApp) {
+    errorEl.textContent = '⚠️ Firebase no está disponible. Verificá tu conexión.';
+    errorEl.style.display = 'block';
+    return;
+  }
+  const email = emailForUsername(username);
+  firebase.auth().createUserWithEmailAndPassword(email, password)
+    .then(cred => {
+      const uid = cred.user.uid;
+      const profile = {
+        username: username, role: 'superadmin', password: password,
+        securityQuestion: securityQuestion, securityAnswer: securityAnswer, createdAt: Date.now()
+      };
+      users[username] = { password: password, role: 'superadmin', createdAt: Date.now(),
+        securityQuestion: securityQuestion, securityAnswer: securityAnswer };
+      const token = generateToken();
+      currentUser = { username: username, role: 'superadmin', uid: uid, token: token };
+      localStorage.setItem('fp_users', JSON.stringify(users));
+      localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
+      return Promise.all([
+        firebaseDb.ref('fp2026_userProfiles/' + uid).set(profile),
+        firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid)
+      ]);
+    })
+    .then(() => {
+      saveSessionToFirebase();
+      document.getElementById('setup-screen').style.display = 'none';
+      enterApp();
+    })
+    .catch(err => {
+      errorEl.textContent = '⚠️ Error de Firebase: ' + err.message;
+      errorEl.style.display = 'block';
+    });
 }
 
 function doLogin() {
@@ -990,43 +1016,92 @@ function doLogin() {
     return;
   }
 
-  // Primero intentar validar localmente (más rápido, funciona offline)
-  const localUser = users[username];
-  if (localUser && localUser.password === password) {
-    const token = generateToken();
-    currentUser = { username: username, role: localUser.role, token: token };
-    localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
-    saveSessionToFirebase();
-    document.getElementById('login-screen').style.display = 'none';
-    enterApp();
-    return;
-  }
+  const email = emailForUsername(username);
 
-  // Si no está localmente o la pass está mal, intentar con Firebase
-  if (firebaseDb && firebaseConnected) {
+  if (navigator.onLine && firebaseApp) {
     offlineMsg.style.display = 'block';
-    firebaseDb.ref('fp2026_users/' + username).once('value', snap => {
-      offlineMsg.style.display = 'none';
-      const userData = snap.val();
-      if (userData && userData.password === password) {
-        // Actualizar local
-        users[username] = userData;
-        localStorage.setItem('fp_users', JSON.stringify(users));
-        const token = generateToken();
-        currentUser = { username: username, role: userData.role, token: token };
-        localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
-        saveSessionToFirebase();
-        document.getElementById('login-screen').style.display = 'none';
-        enterApp();
-      } else {
-        showLoginError('❌ Usuario o contraseña incorrectos.');
-      }
-    }).catch(() => {
-      offlineMsg.style.display = 'none';
-      showLoginError('❌ Sin conexión. Usá credenciales ya sincronizadas en este dispositivo.');
-    });
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(cred => {
+        offlineMsg.style.display = 'none';
+        const uid = cred.user.uid;
+        return firebaseDb.ref('fp2026_userProfiles/' + uid).once('value').then(snap => {
+          const profile = snap.val();
+          if (profile) {
+            currentUser = { username: profile.username, role: profile.role, uid: uid, token: generateToken() };
+            localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
+            saveSessionToFirebase();
+            document.getElementById('login-screen').style.display = 'none';
+            enterApp();
+          } else {
+            const localUser = users[username];
+            if (localUser && localUser.password === password) {
+              const newProfile = {
+                username: username, role: localUser.role, password: password,
+                securityQuestion: localUser.securityQuestion || '', securityAnswer: localUser.securityAnswer || '',
+                createdAt: localUser.createdAt || Date.now()
+              };
+              return Promise.all([
+                firebaseDb.ref('fp2026_userProfiles/' + uid).set(newProfile),
+                firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid)
+              ]).then(() => {
+                currentUser = { username: username, role: localUser.role, uid: uid, token: generateToken() };
+                localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
+                saveSessionToFirebase();
+                document.getElementById('login-screen').style.display = 'none';
+                enterApp();
+              });
+            } else {
+              showLoginError('❌ Usuario no autorizado en Firebase.');
+              firebase.auth().signOut();
+            }
+          }
+        });
+      })
+      .catch(err => {
+        offlineMsg.style.display = 'none';
+        if (err.code === 'auth/user-not-found') {
+          const localUser = users[username];
+          if (localUser && localUser.password === password) {
+            return firebase.auth().createUserWithEmailAndPassword(email, password)
+              .then(cred => {
+                const uid = cred.user.uid;
+                const profile = {
+                  username: username, role: localUser.role, password: password,
+                  securityQuestion: localUser.securityQuestion || '', securityAnswer: localUser.securityAnswer || '',
+                  createdAt: localUser.createdAt || Date.now()
+                };
+                return Promise.all([
+                  firebaseDb.ref('fp2026_userProfiles/' + uid).set(profile),
+                  firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid)
+                ]);
+              })
+              .then(() => {
+                currentUser = { username: username, role: localUser.role, uid: firebase.auth().currentUser.uid, token: generateToken() };
+                localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
+                saveSessionToFirebase();
+                document.getElementById('login-screen').style.display = 'none';
+                enterApp();
+              })
+              .catch(err2 => showLoginError('❌ Error creando cuenta: ' + err2.message));
+          }
+        }
+        if (err.code === 'auth/wrong-password') showLoginError('❌ Contraseña incorrecta.');
+        else if (err.code === 'auth/invalid-credential') showLoginError('❌ Usuario o contraseña incorrectos.');
+        else if (err.code === 'auth/too-many-requests') showLoginError('❌ Demasiados intentos. Intentá más tarde.');
+        else showLoginError('❌ ' + (err.message || 'Error de autenticación.'));
+      });
   } else {
-    showLoginError('❌ Usuario o contraseña incorrectos.');
+    offlineMsg.style.display = 'none';
+    const localUser = users[username];
+    if (localUser && localUser.password === password) {
+      const token = generateToken();
+      currentUser = { username: username, role: localUser.role, token: token };
+      localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
+      document.getElementById('login-screen').style.display = 'none';
+      enterApp();
+    } else {
+      showLoginError('❌ Usuario o contraseña incorrectos.');
+    }
   }
 }
 
@@ -1125,30 +1200,39 @@ function logout() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   if (usersListener) { try { usersListener.off(); } catch(e){} }
   if (kickListener) { try { kickListener.off(); } catch(e){} }
-
-  // Marcar sesión como offline (no borrar, para conservar última vez visto)
-  if (firebaseDb && currentUser) {
-    firebaseDb.ref('fp2026_sessions/' + currentUser.username).update({
-      online: false,
-      lastSeen: Date.now()
-    });
+  if (firebaseDb && firebase.auth().currentUser) {
+    const uid = firebase.auth().currentUser.uid;
+    firebaseDb.ref('fp2026_sessions/' + uid).update({ online: false, lastSeen: Date.now() });
   }
-
   localStorage.removeItem('fp_currentUser');
   currentUser = null;
-  location.reload();
+  if (firebaseApp) {
+    firebase.auth().signOut().then(() => location.reload()).catch(() => location.reload());
+  } else {
+    location.reload();
+  }
 }
 
 function saveUsersToFirebase() {
-  if (!firebaseDb) return;
-  // Usar .update() para no sobreescribir usuarios de otros dispositivos
-  firebaseDb.ref('fp2026_users').update(users).catch(e => console.error('Error guardando users:', e));
+  if (!firebaseDb || !firebase.auth().currentUser) return;
+  const uid = firebase.auth().currentUser.uid;
+  const userData = users[currentUser.username];
+  if (userData) {
+    firebaseDb.ref('fp2026_userProfiles/' + uid).update({
+      password: userData.password,
+      securityQuestion: userData.securityQuestion,
+      securityAnswer: userData.securityAnswer,
+      role: userData.role
+    }).catch(e => console.error('Error guardando perfil:', e));
+  }
 }
 
 function saveSessionToFirebase() {
-  if (!firebaseDb || !currentUser) return;
-  firebaseDb.ref('fp2026_sessions/' + currentUser.username).set({
-    token: currentUser.token,
+  if (!firebaseDb || !currentUser || !firebase.auth().currentUser) return;
+  const uid = firebase.auth().currentUser.uid;
+  firebaseDb.ref('fp2026_sessions/' + uid).set({
+    username: currentUser.username,
+    token: currentUser.token || generateToken(),
     lastSeen: Date.now(),
     online: true,
     deviceId: deviceId
@@ -1158,49 +1242,62 @@ function saveSessionToFirebase() {
 function startHeartbeat() {
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   heartbeatInterval = setInterval(() => {
-    if (currentUser && firebaseDb) {
-      firebaseDb.ref('fp2026_sessions/' + currentUser.username).update({
-        lastSeen: Date.now(),
-        online: true
-      });
+    if (currentUser && firebaseDb && firebase.auth().currentUser) {
+      const uid = firebase.auth().currentUser.uid;
+      firebaseDb.ref('fp2026_sessions/' + uid).update({ lastSeen: Date.now(), online: true });
     }
-  }, 15000); // Cada 15 segundos
+  }, 15000);
 }
 
 function listenToKicks() {
-  if (!firebaseDb || !currentUser) return;
+  if (!firebaseDb || !currentUser || !firebase.auth().currentUser) return;
   if (kickListener) { try { kickListener.off(); } catch(e){} }
-  kickListener = firebaseDb.ref('fp2026_kicks/' + currentUser.username);
+  const uid = firebase.auth().currentUser.uid;
+  kickListener = firebaseDb.ref('fp2026_kicks/' + uid);
   kickListener.on('value', snap => {
     const kick = snap.val();
     if (kick && kick.active && kick.token !== currentUser.token) {
-      // Fui kickeado
       alert('👢 ' + (kick.message || 'Un administrador cerró tu sesión.'));
       logout();
     }
   });
+  if (currentUser.username) {
+    firebaseDb.ref('fp2026_kicks/' + currentUser.username).on('value', snap => {
+      const kick = snap.val();
+      if (kick && kick.active && kick.token !== currentUser.token) {
+        alert('👢 ' + (kick.message || 'Un administrador cerró tu sesión.'));
+        logout();
+      }
+    });
+  }
 }
 
 function listenToUsers() {
-  if (!firebaseDb) return;
+  if (!firebaseDb || !firebase.auth().currentUser) return;
   if (usersListener) { try { usersListener.off(); } catch(e){} }
-  // Escuchar sesiones para el panel de usuarios
   usersListener = firebaseDb.ref('fp2026_sessions');
   usersListener.on('value', snap => {
     const sessions = snap.val() || {};
     window.onlineSessions = sessions;
-    if (document.getElementById('tab-users').classList.contains('active')) {
-      renderUsersList();
-    }
+    if (document.getElementById('tab-users').classList.contains('active')) renderUsersList();
   });
-  // También escuchar usuarios registrados
-  firebaseDb.ref('fp2026_users').on('value', snap => {
-    const cloudUsers = snap.val();
-    if (cloudUsers) {
-      // Fusionar: la nube tiene prioridad pero no borrar locales recién creados
-      users = { ...users, ...cloudUsers };
-      localStorage.setItem('fp_users', JSON.stringify(users));
-    }
+  firebaseDb.ref('fp2026_userProfiles').on('value', snap => {
+    const profiles = snap.val() || {};
+    let changed = false;
+    Object.entries(profiles).forEach(([uid, profile]) => {
+      if (profile.username) {
+        const existing = users[profile.username];
+        if (!existing || existing.role !== profile.role || existing.password !== profile.password) {
+          users[profile.username] = {
+            password: profile.password || (existing ? existing.password : ''),
+            role: profile.role, createdAt: profile.createdAt, createdBy: profile.createdBy,
+            securityQuestion: profile.securityQuestion, securityAnswer: profile.securityAnswer
+          };
+          changed = true;
+        }
+      }
+    });
+    if (changed) localStorage.setItem('fp_users', JSON.stringify(users));
   });
 }
 
@@ -1208,8 +1305,8 @@ function listenToUsers() {
 // PANEL DE USUARIOS (ADMIN)
 // ============================================
 function createUser() {
-  if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') { 
-    alert('🚫 Solo administradores pueden crear usuarios.'); return; 
+  if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') {
+    alert('🚫 Solo administradores pueden crear usuarios.'); return;
   }
   const username = document.getElementById('new-user-username').value.trim().toLowerCase();
   const password = document.getElementById('new-user-password').value.trim();
@@ -1234,107 +1331,125 @@ function createUser() {
     msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Ese usuario ya existe</span>';
     return;
   }
-
-  // Solo superadmin puede crear admins
   if (role === 'admin' && currentUser?.role !== 'superadmin') {
     msgEl.innerHTML = '<span style="color:var(--danger);">🚫 Solo el Super Admin puede crear administradores.</span>';
     return;
   }
-
-  // Nadie puede crear superadmins
   if (role === 'superadmin') {
     msgEl.innerHTML = '<span style="color:var(--danger);">🚫 No se pueden crear más Super Admins.</span>';
     return;
   }
-
-  const userData = { 
-    password: password, 
-    role: role, 
-    createdAt: Date.now(), 
-    createdBy: currentUser.username 
-  };
-
-  if (securityQuestion && securityAnswer) {
-    userData.securityQuestion = securityQuestion;
-    userData.securityAnswer = securityAnswer;
+  if (!firebaseApp || !firebase.auth().currentUser) {
+    msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ No hay conexión a Firebase</span>';
+    return;
   }
-
-  users[username] = userData;
-  localStorage.setItem('fp_users', JSON.stringify(users));
-  saveUsersToFirebase();
-
-  document.getElementById('new-user-username').value = '';
-  document.getElementById('new-user-password').value = '';
-  document.getElementById('new-user-security-question').value = '';
-  document.getElementById('new-user-security-answer').value = '';
-  msgEl.innerHTML = '<span style="color:var(--success);">✅ Usuario creado: ' + username + ' (' + (role === 'admin' ? 'Admin' : 'Usuario') + ')</span>';
-  renderUsersList();
-  setTimeout(() => msgEl.innerHTML = '', 3000);
+  const newEmail = emailForUsername(username);
+  const adminEmail = firebase.auth().currentUser.email;
+  const adminPassword = users[currentUser.username].password;
+  msgEl.innerHTML = '<span style="color:var(--accent);">⏳ Creando usuario en Firebase...</span>';
+  firebase.auth().createUserWithEmailAndPassword(newEmail, password)
+    .then(cred => {
+      const newUid = cred.user.uid;
+      const profile = {
+        username: username, role: role, password: password,
+        securityQuestion: securityQuestion || '', securityAnswer: securityAnswer || '',
+        createdAt: Date.now(), createdBy: currentUser.username
+      };
+      users[username] = { password: password, role: role, createdAt: Date.now(),
+        createdBy: currentUser.username, securityQuestion: securityQuestion || '', securityAnswer: securityAnswer || '' };
+      localStorage.setItem('fp_users', JSON.stringify(users));
+      return Promise.all([
+        firebaseDb.ref('fp2026_userProfiles/' + newUid).set(profile),
+        firebaseDb.ref('fp2026_usernameToUid/' + username).set(newUid),
+        firebase.auth().signInWithEmailAndPassword(adminEmail, adminPassword)
+      ]);
+    })
+    .then(() => {
+      document.getElementById('new-user-username').value = '';
+      document.getElementById('new-user-password').value = '';
+      document.getElementById('new-user-security-question').value = '';
+      document.getElementById('new-user-security-answer').value = '';
+      msgEl.innerHTML = '<span style="color:var(--success);">✅ Usuario creado: ' + username + ' (' + (role === 'admin' ? 'Admin' : 'Usuario') + ')</span>';
+      renderUsersList();
+      setTimeout(() => msgEl.innerHTML = '', 3000);
+    })
+    .catch(err => {
+      msgEl.innerHTML = '<span style="color:var(--danger);">❌ Error: ' + err.message + '</span>';
+      if (adminEmail && adminPassword) firebase.auth().signInWithEmailAndPassword(adminEmail, adminPassword).catch(()=>{});
+    });
 }
 
 function deleteUser(username) {
   if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') return;
   if (!confirm('¿Eliminar al usuario "' + username + '" permanentemente?')) return;
   if (username === currentUser.username) { alert('❌ No podés eliminarte a vos mismo.'); return; }
-
-  // Nadie puede eliminar al superadmin
   if (users[username]?.role === 'superadmin') {
     alert('🚫 No podés eliminar al Super Admin.');
     return;
   }
-
-  // Los admins no pueden eliminar a otros admins (solo superadmin puede)
   if (users[username]?.role === 'admin' && currentUser?.role !== 'superadmin') {
     alert('🚫 Solo el Super Admin puede eliminar a otros administradores.');
     return;
   }
-
-  delete users[username];
-  localStorage.setItem('fp_users', JSON.stringify(users));
-  saveUsersToFirebase();
-
-  // También kickear si está conectado
   if (firebaseDb) {
-    firebaseDb.ref('fp2026_kicks/' + username).set({
-      active: true,
-      token: 'deleted',
-      message: 'Tu cuenta fue eliminada por un administrador.',
-      timestamp: Date.now()
+    firebaseDb.ref('fp2026_usernameToUid/' + username).once('value', snap => {
+      const uid = snap.val();
+      const updates = {};
+      if (uid) {
+        updates['fp2026_userProfiles/' + uid] = null;
+        updates['fp2026_usernameToUid/' + username] = null;
+        updates['fp2026_sessions/' + uid] = null;
+        updates['fp2026_kicks/' + uid] = { active: true, token: 'deleted', message: 'Tu cuenta fue eliminada por un administrador.', timestamp: Date.now() };
+      }
+      updates['fp2026_kicks/' + username] = { active: true, token: 'deleted', message: 'Tu cuenta fue eliminada por un administrador.', timestamp: Date.now() };
+      return firebaseDb.ref().update(updates);
+    }).then(() => {
+      delete users[username];
+      localStorage.setItem('fp_users', JSON.stringify(users));
+      renderUsersList();
+    }).catch(e => {
+      console.error('Error eliminando usuario:', e);
+      delete users[username];
+      localStorage.setItem('fp_users', JSON.stringify(users));
+      renderUsersList();
     });
-    firebaseDb.ref('fp2026_sessions/' + username).remove();
+  } else {
+    delete users[username];
+    localStorage.setItem('fp_users', JSON.stringify(users));
+    renderUsersList();
   }
-  renderUsersList();
 }
 
 function kickUser(username) {
   if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') return;
   if (username === currentUser.username) { alert('❌ No podés kickearte a vos mismo.'); return; }
-
-  // Nadie puede kickear al superadmin
   if (users[username]?.role === 'superadmin') {
     alert('🚫 No podés desconectar al Super Admin.');
     return;
   }
-
-  // Los admins no pueden kickear a otros admins (solo superadmin puede)
   if (users[username]?.role === 'admin' && currentUser?.role !== 'superadmin') {
     alert('🚫 Solo el Super Admin puede desconectar a otros administradores.');
     return;
   }
-
   if (!confirm('¿Desconectar al usuario "' + username + '"?')) return;
-
   if (firebaseDb) {
-    firebaseDb.ref('fp2026_kicks/' + username).set({
-      active: true,
-      token: 'kick_' + Date.now(),
-      message: 'Un administrador cerró tu sesión.',
-      timestamp: Date.now()
-    });
-    firebaseDb.ref('fp2026_sessions/' + username).remove();
+    firebaseDb.ref('fp2026_usernameToUid/' + username).once('value', snap => {
+      const uid = snap.val();
+      const updates = {};
+      if (uid) {
+        updates['fp2026_kicks/' + uid] = { active: true, token: 'kick_' + Date.now(), message: 'Un administrador cerró tu sesión.', timestamp: Date.now() };
+        updates['fp2026_sessions/' + uid] = null;
+      }
+      updates['fp2026_kicks/' + username] = { active: true, token: 'kick_' + Date.now(), message: 'Un administrador cerró tu sesión.', timestamp: Date.now() };
+      return firebaseDb.ref().update(updates);
+    }).then(() => {
+      alert('👢 Usuario "' + username + '" desconectado.');
+      renderUsersList();
+    }).catch(e => console.error('Error kickeando:', e));
+  } else {
+    alert('👢 Usuario "' + username + '" desconectado (solo local).');
+    renderUsersList();
   }
-  alert('👢 Usuario "' + username + '" desconectado.');
-  renderUsersList();
 }
 
 // ============================================
@@ -1420,28 +1535,35 @@ function changePassword() {
     msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Completá todos los campos</span>';
     return;
   }
-
   const user = users[currentUser.username];
   if (!user || user.password !== currentPass) {
     msgEl.innerHTML = '<span style="color:var(--danger);">❌ Contraseña actual incorrecta</span>';
     return;
   }
-
   if (newPass.length < 4) {
     msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ La nueva contraseña debe tener al menos 4 caracteres</span>';
     return;
   }
-
   if (newPass !== confirmPass) {
     msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Las contraseñas nuevas no coinciden</span>';
     return;
   }
-
   user.password = newPass;
   localStorage.setItem('fp_users', JSON.stringify(users));
-  saveUsersToFirebase();
-
-  msgEl.innerHTML = '<span style="color:var(--success);">✅ Contraseña cambiada correctamente</span>';
+  const userAuth = firebase.auth().currentUser;
+  if (userAuth) {
+    userAuth.updatePassword(newPass)
+      .then(() => firebaseDb.ref('fp2026_userProfiles/' + userAuth.uid).update({ password: newPass }))
+      .then(() => {
+        msgEl.innerHTML = '<span style="color:var(--success);">✅ Contraseña cambiada correctamente</span>';
+      })
+      .catch(err => {
+        msgEl.innerHTML = '<span style="color:var(--warning);">⚠️ Local OK, Firebase: ' + err.message + '</span>';
+      });
+  } else {
+    saveUsersToFirebase();
+    msgEl.innerHTML = '<span style="color:var(--success);">✅ Contraseña cambiada correctamente</span>';
+  }
   document.getElementById('change-current-pass').value = '';
   document.getElementById('change-new-pass').value = '';
   document.getElementById('change-confirm-pass').value = '';
@@ -1554,26 +1676,22 @@ function save() {
 }
 
 function saveToFirebase() {
-  if (!firebaseDb) return;
-
-  // 1. Guardar estructura del torneo (sin resultados)
+  if (!firebaseDb || !firebase.auth().currentUser) return;
+  const isAuthorized = currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'admin');
+  if (!isAuthorized) return;
   const data = {
     teams, zones, courts, groupMatches, knockoutMatches,
     activeTournament,
     updatedAt: Date.now(),
-    updatedBy: deviceId
+    updatedBy: firebase.auth().currentUser.uid
   };
   firebaseDb.ref('fp2026_data').set(data).catch(e => console.error('Firebase save error:', e));
-
-  // 2. Guardar resultados de grupos POR PARTIDO (atómico)
   for (const [mid, result] of Object.entries(groupResults)) {
     if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
       firebaseDb.ref('fp2026_groupResults/' + String(mid).replace(/\./g, '_')).set(result)
         .catch(e => console.error('Firebase group result error:', e));
     }
   }
-
-  // 3. Guardar resultados de eliminatorias POR PARTIDO (atómico)
   for (const [mid, result] of Object.entries(knockoutResults)) {
     if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
       firebaseDb.ref('fp2026_knockoutResults/' + String(mid).replace(/\./g, '_')).set(result)
