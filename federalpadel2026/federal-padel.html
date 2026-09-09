@@ -176,6 +176,14 @@
     .bracket-label { font-size: 10px; color: var(--text-tertiary); margin-bottom: 6px; font-weight: 700; }
 
     .empty { text-align: center; padding: 40px 20px; color: var(--text-tertiary); font-size: 14px; font-weight: 500; }
+
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; letter-spacing: 0.3px; }
+    .status-programado { background: var(--bg-dark); color: var(--text-secondary); border: 1px solid var(--border); }
+    .status-en_juego { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
+    .status-en_juego .live-dot { animation: pulse 1s infinite; }
+    .status-demorado { background: var(--warning-light); color: #92400e; border: 1px solid var(--warning); }
+    .status-finalizado { background: var(--success-light); color: var(--success); border: 1px solid var(--success); }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
     .alert { padding: 14px 18px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 14px; font-weight: 700; border: 2px solid transparent; }
     .alert-info { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
     .alert-success { background: var(--success-light); color: var(--success); border-color: var(--success); }
@@ -757,6 +765,15 @@
         <div class="alert alert-success">
           ✅ Los jugadores ven: zonas, canchas, horarios, jugadores por pareja y resultado de cada set.
         </div>
+        <div style="margin-top:12px;padding:14px;background:var(--bg-dark);border-radius:var(--radius-sm);border:2px solid var(--border);">
+          <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px;">🌐 Página pública del torneo (resultados en vivo)</div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">Los jugadores entran sin usuario y ven en tiempo real: partidos en juego, demorados, próximos, resultados y posiciones. Se actualiza sola vía Firebase.</p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input class="input" id="public-url-display" readonly style="flex:1;min-width:200px;margin-bottom:0;font-size:12px;" />
+            <button class="btn btn-primary btn-sm" onclick="copyPublicUrl()">📋 Copiar link</button>
+            <a class="btn btn-secondary btn-sm" id="public-url-link" href="#" target="_blank">🔗 Abrir</a>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -795,6 +812,8 @@ let groupMatches = JSON.parse(localStorage.getItem('fp_groupMatches') || '[]');
 let groupResults = JSON.parse(localStorage.getItem('fp_groupResults') || '{}');
 let knockoutMatches = JSON.parse(localStorage.getItem('fp_knockoutMatches') || '[]');
 let knockoutResults = JSON.parse(localStorage.getItem('fp_knockoutResults') || '{}');
+let groupStatus = JSON.parse(localStorage.getItem('fp_groupStatus') || '{}');
+let knockoutStatus = JSON.parse(localStorage.getItem('fp_knockoutStatus') || '{}');
 let activeTournament = localStorage.getItem('fp_activeTournament') || 'all';
 
 // ============================================
@@ -1670,6 +1689,8 @@ function save() {
   localStorage.setItem('fp_groupResults', JSON.stringify(groupResults));
   localStorage.setItem('fp_knockoutMatches', JSON.stringify(knockoutMatches));
   localStorage.setItem('fp_knockoutResults', JSON.stringify(knockoutResults));
+  localStorage.setItem('fp_groupStatus', JSON.stringify(groupStatus));
+  localStorage.setItem('fp_knockoutStatus', JSON.stringify(knockoutStatus));
   localStorage.setItem('fp_activeTournament', activeTournament);
   saveToFirebase();
   if (autoSync && driveUrl) debouncedSync();
@@ -1698,6 +1719,10 @@ function saveToFirebase() {
         .catch(e => console.error('Firebase knockout result error:', e));
     }
   }
+  firebaseDb.ref('fp2026_groupStatus').set(sanitizeForFirebase(groupStatus))
+    .catch(e => console.error('Firebase group status error:', e));
+  firebaseDb.ref('fp2026_knockoutStatus').set(sanitizeForFirebase(knockoutStatus))
+    .catch(e => console.error('Firebase knockout status error:', e));
 }
 
 function sanitizeForFirebase(obj) {
@@ -1779,6 +1804,18 @@ function listenToFirebaseData() {
       renderKnockout();
     }
   });
+
+  // Escuchar estado de partidos (programado/en juego/demorado/finalizado)
+  firebaseDb.ref('fp2026_groupStatus').on('value', snap => {
+    groupStatus = unsanitizeFromFirebase(snap.val() || {});
+    saveLocalOnly();
+    if (document.getElementById('tab-groups').classList.contains('active')) renderGroups();
+  });
+  firebaseDb.ref('fp2026_knockoutStatus').on('value', snap => {
+    knockoutStatus = unsanitizeFromFirebase(snap.val() || {});
+    saveLocalOnly();
+    if (document.getElementById('tab-knockout').classList.contains('active')) renderKnockout();
+  });
 }
 
 function saveLocalOnly() {
@@ -1789,6 +1826,8 @@ function saveLocalOnly() {
   localStorage.setItem('fp_groupResults', JSON.stringify(groupResults));
   localStorage.setItem('fp_knockoutMatches', JSON.stringify(knockoutMatches));
   localStorage.setItem('fp_knockoutResults', JSON.stringify(knockoutResults));
+  localStorage.setItem('fp_groupStatus', JSON.stringify(groupStatus));
+  localStorage.setItem('fp_knockoutStatus', JSON.stringify(knockoutStatus));
   localStorage.setItem('fp_activeTournament', activeTournament);
 }
 
@@ -1926,6 +1965,72 @@ function applyUserRestrictions() {
 
 function renderAdminPanel() {
   // Ya no hay panel admin separado, está todo en la pestaña Admin
+}
+
+// ============================================
+// ESTADO DE PARTIDOS (Programado / En juego / Demorado / Finalizado)
+// ============================================
+const STATUS_INFO = {
+  programado: { label: '\u{1F55A} Programado', cls: 'status-programado' },
+  en_juego:   { label: '\u{1F534} EN JUEGO',   cls: 'status-en_juego' },
+  demorado:   { label: '\u{26A0}\u{FE0F} DEMORADO', cls: 'status-demorado' },
+  finalizado: { label: '\u{2705} FINALIZADO', cls: 'status-finalizado' }
+};
+
+function getMatchStatus(mid, isKnockout) {
+  const map = isKnockout ? knockoutStatus : groupStatus;
+  return map[mid] || 'programado';
+}
+
+function statusBadge(st) {
+  const info = STATUS_INFO[st] || STATUS_INFO.programado;
+  const dot = st === 'en_juego' ? '<span class="live-dot"></span>' : '';
+  return `<span class="status-badge ${info.cls}">${dot}${info.label}</span>`;
+}
+
+function renderStatusRow(mid, isKnockout) {
+  const st = getMatchStatus(mid, isKnockout);
+  const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+  if (!isAdmin) {
+    return `<div style="text-align:center;margin-top:10px;">${statusBadge(st)}</div>`;
+  }
+  const btns = Object.entries(STATUS_INFO).map(([key, info]) =>
+    `<button class="btn btn-sm ${st === key ? 'btn-primary' : 'btn-secondary'}" style="padding:5px 10px;font-size:11px;" onclick="setMatchStatus(${mid},'${key}',${isKnockout})">${info.label}</button>`
+  ).join('');
+  return `<div style="text-align:center;margin-top:10px;">
+    ${statusBadge(st)}
+    <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap;">${btns}</div>
+  </div>`;
+}
+
+function setMatchStatus(mid, status, isKnockout) {
+  const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+  if (!isAdmin) { alert('\u{1F6AB} Solo el administrador puede cambiar el estado del partido.'); return; }
+  if (isKnockout) knockoutStatus[mid] = status; else groupStatus[mid] = status;
+  save();
+  if (isKnockout) renderKnockout(); else { renderGroups(); renderStandings(); }
+}
+
+function isMatchComplete(r) {
+  if (!r) return false;
+  const has = v => v !== undefined && v !== '' && v !== null;
+  if (!has(r.s1t1) || !has(r.s1t2) || !has(r.s2t1) || !has(r.s2t2)) return false;
+  const s1t1 = +r.s1t1, s1t2 = +r.s1t2, s2t1 = +r.s2t1, s2t2 = +r.s2t2;
+  const s3t1 = +(r.s3t1 || 0), s3t2 = +(r.s3t2 || 0);
+  let w1 = 0, w2 = 0;
+  if (s1t1 > s1t2) w1++; else w2++;
+  if (s2t1 > s2t2) w1++; else w2++;
+  if (w1 === 2 || w2 === 2) return true;
+  return (s3t1 > 0 || s3t2 > 0) && s3t1 !== s3t2;
+}
+
+function maybeAutoFinish(mid, isKnockout) {
+  const map = isKnockout ? knockoutStatus : groupStatus;
+  if ((map[mid] || 'programado') === 'finalizado') return;
+  const results = isKnockout ? knockoutResults : groupResults;
+  if (isMatchComplete(results[mid])) {
+    map[mid] = 'finalizado';
+  }
 }
 
 // ============================================
@@ -2262,6 +2367,7 @@ function saveGroupResult(mid, field, val) {
   if (currentUser?.role === 'user' && hasValue) { alert('🚫 Solo el administrador puede modificar resultados ya cargados.'); return; }
   if (!groupResults[mid]) groupResults[mid] = {};
   groupResults[mid][field] = val === '' ? '' : (parseInt(val) || 0);
+  maybeAutoFinish(mid, false);
   save();
   renderStandings();
 }
@@ -2316,6 +2422,7 @@ function renderGroups() {
               <span style="font-size:12px;font-weight:800;color:var(--text-secondary);width:28px;">3S</span>
             </div>
           </div>
+          ${renderStatusRow(m.id, false)}
         </div>`;
       }).join('')}
     </div>`;
@@ -2527,6 +2634,7 @@ function saveKnockoutResult(mid, field, val) {
   if (currentUser?.role === 'user' && hasValue) { alert('🚫 Solo el administrador puede modificar resultados ya cargados.'); return; }
   if (!knockoutResults[mid]) knockoutResults[mid] = {};
   knockoutResults[mid][field] = val === '' ? '' : (parseInt(val) || 0);
+  maybeAutoFinish(mid, true);
   save();
   resolveKnockoutTeams();
   renderKnockout();
@@ -2616,6 +2724,7 @@ function renderKnockout() {
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">3S</span>
             </div>
           </div>` : '<div class="small" style="text-align:center;color:var(--text-tertiary);padding:8px 0;">Esperando equipos...</div>'}
+          ${renderStatusRow(m.id, true)}
         </div>`;
       }).join('')}
     </div>`;
@@ -3047,8 +3156,27 @@ function loadCoverPhoto() {
 // ============================================
 // CONFIG RENDER
 // ============================================
+function getPublicUrl() {
+  var base = location.href.split('?')[0];
+  return base.substring(0, base.lastIndexOf('/') + 1) + 'ver.html';
+}
+function copyPublicUrl() {
+  var el = document.getElementById('public-url-display');
+  el.select();
+  if (navigator.clipboard) { navigator.clipboard.writeText(el.value).then(function(){ alert('📋 Link copiado: ' + el.value); }); }
+  else { document.execCommand('copy'); alert('📋 Link copiado'); }
+}
+function renderPublicLink() {
+  var url = getPublicUrl();
+  var el = document.getElementById('public-url-display');
+  if (el) el.value = url;
+  var link = document.getElementById('public-url-link');
+  if (link) link.href = url;
+}
+
 function renderConfig() {
   document.getElementById('drive-url').value = driveUrl;
+  renderPublicLink();
   const toggle = document.getElementById('auto-sync-toggle');
   toggle.className = autoSync ? 'toggle-switch on' : 'toggle-switch';
 }
