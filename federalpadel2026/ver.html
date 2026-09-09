@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Federal Padel 2026 · Resultados en Vivo</title>
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Resultados, horarios y posiciones del torneo Federal Padel 2026 en tiempo real.">
+  <style>
+    :root {
+      --bg: #0b1220; --bg2: #111c33; --card: #16233f; --card2: #1c2d52;
+      --border: #263a66; --text: #eef4ff; --muted: #8ea3c8;
+      --accent: #38bdf8; --green: #22c55e; --red: #ef4444; --yellow: #f59e0b; --pink: #f472b6;
+      --radius: 14px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%); color: var(--text); min-height: 100vh; padding-bottom: 60px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 0 14px; }
+
+    header { text-align: center; padding: 28px 0 18px; background: radial-gradient(ellipse at top, rgba(56,189,248,0.15), transparent 60%); }
+    header .logo { font-size: 44px; }
+    header h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+    header p { color: var(--muted); font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .live-pill { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 6px 16px; border-radius: 20px; background: rgba(34,197,94,0.12); border: 1px solid var(--green); color: var(--green); font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+    .live-pill.off { background: rgba(148,163,184,0.12); border-color: #475569; color: #94a3b8; }
+    .live-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    .stats { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; }
+    .stat { flex: 1; min-width: 100px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; text-align: center; }
+    .stat b { display: block; font-size: 24px; font-weight: 900; }
+    .stat span { font-size: 10px; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
+
+    .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 12px; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex-shrink: 0; padding: 9px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); font-size: 13px; font-weight: 800; cursor: pointer; transition: all .2s; white-space: nowrap; }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #06202e; }
+
+    .section-title { font-size: 15px; font-weight: 900; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+    .card.playing { border-color: var(--red); box-shadow: 0 0 0 1px var(--red), 0 4px 18px rgba(239,68,68,0.15); }
+    .card.delayed { border-color: var(--yellow); }
+    .card.done { opacity: 0.85; }
+
+    .match-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
+    .tag { padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.4px; }
+    .tag-cat { background: rgba(56,189,248,0.15); color: var(--accent); border: 1px solid rgba(56,189,248,0.4); }
+    .tag-zone { background: rgba(148,163,184,0.12); color: var(--muted); border: 1px solid var(--border); }
+    .tag-court { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.4); }
+    .tag-time { background: rgba(245,158,11,0.12); color: var(--yellow); border: 1px solid rgba(245,158,11,0.4); }
+
+    .badge-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 900; letter-spacing: 0.5px; }
+    .st-programado { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid #475569; }
+    .st-en_juego { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid var(--red); }
+    .st-en_juego .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite; }
+    .st-demorado { background: rgba(245,158,11,0.12); color: var(--yellow); border: 1px solid var(--yellow); }
+    .st-finalizado { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid var(--green); }
+
+    .teams { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .team { flex: 1; font-weight: 800; font-size: 14px; }
+    .team.right { text-align: right; }
+    .vs { font-size: 10px; font-weight: 900; color: var(--muted); background: rgba(148,163,184,0.1); padding: 3px 8px; border-radius: 8px; }
+    .sets { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+    .set-row { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; }
+    .set-row b { min-width: 30px; text-align: center; padding: 4px 0; border-radius: 8px; background: var(--card2); font-size: 15px; }
+    .set-row .lbl { color: var(--muted); font-weight: 800; width: 24px; font-size: 10px; }
+    .winner-name { color: var(--green); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { text-align: left; padding: 9px 6px; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: 0.7px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 6px; border-bottom: 1px solid rgba(38,58,102,0.5); }
+    tr:last-child td { border-bottom: none; }
+    .pos-1 td:first-child { color: var(--green); font-weight: 900; }
+    .pos-2 td:first-child { color: var(--accent); font-weight: 800; }
+    .pos-3 td:first-child { color: var(--yellow); font-weight: 800; }
+
+    .champion { text-align: center; padding: 22px; background: linear-gradient(135deg, rgba(245,158,11,0.15), var(--card)); border: 1px solid var(--yellow); border-radius: var(--radius); margin-bottom: 12px; }
+    .champion .cup { font-size: 42px; }
+    .champion .name { font-size: 20px; font-weight: 900; color: var(--yellow); margin-top: 6px; }
+    .champion .runner { font-size: 13px; color: var(--muted); font-weight: 700; margin-top: 8px; }
+
+    .empty { text-align: center; color: var(--muted); padding: 26px 12px; font-size: 13px; font-weight: 600; }
+    footer { text-align: center; color: var(--muted); font-size: 11px; padding: 26px 12px; font-weight: 600; }
+    .refresh-note { text-align: center; font-size: 11px; color: var(--muted); margin-top: 6px; }
+    @media (max-width: 480px) { header h1 { font-size: 22px; } .stat b { font-size: 20px; } }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo">🏆</div>
+    <h1>Federal Padel 2026</h1>
+    <p>Resultados, horarios y posiciones en vivo</p>
+    <div class="live-pill off" id="live-pill"><span class="dot"></span><span id="live-text">CONECTANDO…</span></div>
+  </header>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat"><b id="st-parejas">–</b><span>Parejas</span></div>
+      <div class="stat"><b id="st-cats">–</b><span>Categorías</span></div>
+      <div class="stat"><b id="st-playing" style="color:var(--red)">–</b><span>En juego</span></div>
+      <div class="stat"><b id="st-done" style="color:var(--green)">–</b><span>Finalizados</span></div>
+    </div>
+
+    <div class="tabs" id="tabs"><div class="empty" style="width:100%;padding:10px;">Cargando categorías…</div></div>
+
+    <div id="champions"></div>
+    <div id="live-sections"></div>
+    <div id="standings"></div>
+    <div class="refresh-note">🔄 Esta página se actualiza automáticamente. No hace falta recargar.</div>
+  </div>
+
+  <footer>© 2026 Eckerdt Mariano · Federal Padel 2026 · Resultados en vivo</footer>
+
+<script>
+// Misma configuración que la app (solo lectura)
+const firebaseConfig = {
+  apiKey: "AIzaSyAnFnYL4FmwhvtlR8VX9Z0KLKYjeQVaWw4",
+  authDomain: "federal-padel.firebaseapp.com",
+  databaseURL: "https://federal-padel-default-rtdb.firebaseio.com",
+  projectId: "federal-padel",
+  storageBucket: "federal-padel.firebasestorage.app",
+  messagingSenderId: "966866202897",
+  appId: "1:966866202897:web:cf0b572d312d0ff05a5cb0"
+};
+
+let teams = [], zones = [], courts = [], groupMatches = [], knockoutMatches = [];
+let groupResults = {}, knockoutResults = {}, groupStatus = {}, knockoutStatus = {};
+let filterCat = 'all';
+let dataReady = false;
+
+const catLabels = { '1ra':'1ra','2da':'2da','3ra':'3ra','4ta':'4ta','5ta':'5ta','6ta':'6ta','7ma':'7ma','suma5':'Suma 5','suma6':'Suma 6','suma9':'Suma 9','suma10':'Suma 10','suma13':'Suma 13' };
+const genderLabels = { 'cab':'Caballeros','dam':'Damas','mix':'Mixto' };
+const STATUS = {
+  programado: { label: '🕐 PROGRAMADO', cls: 'st-programado' },
+  en_juego:   { label: '🔴 EN JUEGO', cls: 'st-en_juego', dot: true },
+  demorado:   { label: '⚠️ DEMORADO', cls: 'st-demorado' },
+  finalizado: { label: '✅ FINALIZADO', cls: 'st-finalizado' }
+};
+
+const db = firebase.initializeApp(firebaseConfig).database();
+db.ref('.info/connected').on('value', s => {
+  const on = s.val() === true;
+  const pill = document.getElementById('live-pill');
+  pill.className = 'live-pill' + (on ? '' : ' off');
+  document.getElementById('live-text').textContent = on ? 'EN VIVO' : 'SIN CONEXIÓN';
+});
+
+db.ref('fp2026_data').on('value', s => {
+  const d = s.val();
+  if (!d) return;
+  teams = d.teams || []; zones = d.zones || []; courts = d.courts || [];
+  groupMatches = d.groupMatches || []; knockoutMatches = d.knockoutMatches || [];
+  dataReady = true; renderAll();
+});
+db.ref('fp2026_groupResults').on('value', s => { groupResults = unsanitize(s.val() || {}); if (dataReady) renderAll(); });
+db.ref('fp2026_knockoutResults').on('value', s => { knockoutResults = unsanitize(s.val() || {}); if (dataReady) renderAll(); });
+db.ref('fp2026_groupStatus').on('value', s => { groupStatus = unsanitize(s.val() || {}); if (dataReady) renderAll(); });
+db.ref('fp2026_knockoutStatus').on('value', s => { knockoutStatus = unsanitize(s.val() || {}); if (dataReady) renderAll(); });
+
+function unsanitize(o) { const out = {}; for (const k in o) out[k.replace(/_/g, '.')] = o[k]; return out; }
+function teamName(id) { const t = teams.find(x => x.id == id); return t ? t.name : '???'; }
+function catFull(cat, g) { return (catLabels[cat] || cat) + ' ' + (genderLabels[g] || ''); }
+function courtName(id) { const c = courts.find(x => x.id == id); return c ? c.name : null; }
+
+function getStatus(m, isKo) {
+  const map = isKo ? knockoutStatus : groupStatus;
+  let st = map[m.id] || 'programado';
+  if (st === 'programado' && isMatchComplete(isKo ? knockoutResults[m.id] : groupResults[m.id])) st = 'finalizado';
+  return st;
+}
+function isMatchComplete(r) {
+  if (!r) return false;
+  const has = v => v !== undefined && v !== '' && v !== null;
+  if (!has(r.s1t1) || !has(r.s1t2) || !has(r.s2t1) || !has(r.s2t2)) return false;
+  const a=+r.s1t1,b=+r.s1t2,c=+r.s2t1,d=+r.s2t2,e=+(r.s3t1||0),f=+(r.s3t2||0);
+  let w1=0,w2=0; if(a>b)w1++;else w2++; if(c>d)w1++;else w2++;
+  if (w1===2||w2===2) return true;
+  return (e>0||f>0)&&e!==f;
+}
+function matchWinner(m, isKo) {
+  const r = isKo ? knockoutResults[m.id] : groupResults[m.id];
+  if (!r || !isMatchComplete(r)) return null;
+  const a=+r.s1t1,b=+r.s1t2,c=+r.s2t1,d=+r.s2t2,e=+(r.s3t1||0),f=+(r.s3t2||0);
+  let w1=0,w2=0; if(a>b)w1++;else w2++; if(c>d)w1++;else w2++; if((e>0||f>0)&&e!==f){if(e>f)w1++;else w2++;}
+  return w1>w2 ? m.t1 : m.t2;
+}
+function fmtTime(t) { return t || ''; }
+
+function statusBadge(st) {
+  const i = STATUS[st] || STATUS.programado;
+  return `<span class="badge-status ${i.cls}">${i.dot ? '<span class="dot"></span>' : ''}${i.label}</span>`;
+}
+
+function matchCard(m, isKo) {
+  const r = isKo ? (knockoutResults[m.id] || {}) : (groupResults[m.id] || {});
+  const st = getStatus(m, isKo);
+  const z = zones.find(zn => zn.id == m.zoneId);
+  const winner = matchWinner(m, isKo);
+  const t1 = m.t1 ? teamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
+  const t2 = m.t2 ? teamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
+  const court = m.courtName || courtName(m.courtId);
+  const setRow = (lbl, v1, v2) => {
+    const has1 = v1 !== undefined && v1 !== '' && v1 !== null;
+    const has2 = v2 !== undefined && v2 !== '' && v2 !== null;
+    if (!has1 && !has2) return '';
+    return `<div class="set-row"><span class="lbl">${lbl}</span><b>${has1 ? v1 : '–'}</b><span style="color:var(--muted)">-</span><b>${has2 ? v2 : '–'}</b><span class="lbl">${lbl}</span></div>`;
+  };
+  const cardCls = st === 'en_juego' ? 'card playing' : st === 'demorado' ? 'card delayed' : st === 'finalizado' ? 'card done' : 'card';
+  return `<div class="${cardCls}">
+    <div class="match-meta">
+      <span class="tag tag-cat">${catFull(m.cat, m.gender)}</span>
+      ${z ? `<span class="tag tag-zone">${z.name}</span>` : (m.label ? `<span class="tag tag-zone">${m.label}</span>` : '')}
+      ${court ? `<span class="tag tag-court">🏟️ ${court}</span>` : ''}
+      ${m.time ? `<span class="tag tag-time">🕐 ${fmtTime(m.time)}</span>` : ''}
+    </div>
+    <div class="teams">
+      <div class="team ${winner && winner === m.t1 ? 'winner-name' : ''}">${t1}</div>
+      <div class="vs">VS</div>
+      <div class="team right ${winner && winner === m.t2 ? 'winner-name' : ''}">${t2}</div>
+    </div>
+    <div class="sets">
+      ${setRow('1S', r.s1t1, r.s1t2)}
+      ${setRow('2S', r.s2t1, r.s2t2)}
+      ${setRow('3S', r.s3t1, r.s3t2)}
+    </div>
+    <div style="text-align:center;margin-top:10px;">${statusBadge(st)}</div>
+  </div>`;
+}
+
+function matchesFilter(m) {
+  if (filterCat === 'all') return true;
+  const [c, g] = filterCat.split('|');
+  return m.cat === c && m.gender === g;
+}
+
+function calcZoneStandings(zoneId) {
+  const z = zones.find(zn => zn.id == zoneId);
+  if (!z) return [];
+  const tids = z.teamIds || [];
+  const stats = {};
+  tids.forEach(tid => stats[tid] = { tid, pj:0, pg:0, pp:0, sf:0, sc:0, gf:0, gc:0, pts:0 });
+  groupMatches.filter(m => m.zoneId == zoneId).forEach(m => {
+    const r = groupResults[m.id];
+    if (!r || (!r.s1t1 && r.s1t1 !== 0)) return;
+    const s1t1=+r.s1t1||0,s1t2=+r.s1t2||0,s2t1=+r.s2t1||0,s2t2=+r.s2t2||0,s3t1=+r.s3t1||0,s3t2=+r.s3t2||0;
+    let w1=0,w2=0;
+    if(s1t1>s1t2)w1++;else w2++; if(s2t1>s2t2)w1++;else w2++;
+    if((s3t1>0||s3t2>0)&&s3t1!==s3t2){if(s3t1>s3t2)w1++;else w2++;}
+    const g1=s1t1+s2t1+s3t1, g2=s1t2+s2t2+s3t2;
+    stats[m.t1].pj++; stats[m.t2].pj++;
+    stats[m.t1].sf+=w1; stats[m.t1].sc+=w2; stats[m.t2].sf+=w2; stats[m.t2].sc+=w1;
+    stats[m.t1].gf+=g1; stats[m.t1].gc+=g2; stats[m.t2].gf+=g2; stats[m.t2].gc+=g1;
+    if (w1>w2){stats[m.t1].pg++;stats[m.t1].pts+=3;stats[m.t2].pp++;}
+    else if (w2>w1){stats[m.t2].pg++;stats[m.t2].pts+=3;stats[m.t1].pp++;}
+    else {stats[m.t1].pts++;stats[m.t2].pts++;}
+  });
+  return Object.values(stats).sort((a,b)=> b.pts-a.pts || (b.sf-b.sc)-(a.sf-a.sc) || b.gf-a.gf);
+}
+
+function renderAll() {
+  if (!dataReady) return;
+  renderStats(); renderTabs(); renderMatches(); renderStandings(); renderChampions();
+}
+
+function renderStats() {
+  const cats = new Set(zones.map(z => z.cat + '|' + z.gender));
+  let playing = 0, done = 0;
+  [...groupMatches.map(m => [m,false]), ...knockoutMatches.map(m => [m,true])].forEach(([m,ko]) => {
+    const st = getStatus(m, ko);
+    if (st === 'en_juego') playing++;
+    if (st === 'finalizado') done++;
+  });
+  document.getElementById('st-parejas').textContent = teams.length;
+  document.getElementById('st-cats').textContent = cats.size;
+  document.getElementById('st-playing').textContent = playing;
+  document.getElementById('st-done').textContent = done;
+}
+
+function renderTabs() {
+  const cats = {};
+  zones.forEach(z => { cats[z.cat + '|' + z.gender] = catFull(z.cat, z.gender); });
+  const keys = Object.keys(cats);
+  if (keys.length && !keys.includes(filterCat) && filterCat !== 'all') filterCat = 'all';
+  let html = `<button class="tab ${filterCat==='all'?'active':''}" onclick="setFilter('all')">🏆 Todas</button>`;
+  html += keys.map(k => `<button class="tab ${filterCat===k?'active':''}" onclick="setFilter('${k}')">${cats[k]}</button>`).join('');
+  document.getElementById('tabs').innerHTML = html;
+}
+function setFilter(k) { filterCat = k; renderAll(); }
+
+function renderMatches() {
+  const g = groupMatches.filter(matchesFilter);
+  const ko = knockoutMatches.filter(matchesFilter);
+  const playing = [...g.filter(m => getStatus(m,false)==='en_juego').map(m=>[m,false]), ...ko.filter(m => getStatus(m,true)==='en_juego').map(m=>[m,true])];
+  const delayed = [...g.filter(m => getStatus(m,false)==='demorado').map(m=>[m,false]), ...ko.filter(m => getStatus(m,true)==='demorado').map(m=>[m,true])];
+  const upcoming = [...g.filter(m => getStatus(m,false)==='programado').map(m=>[m,false]), ...ko.filter(m => getStatus(m,true)==='programado').map(m=>[m,true])]
+    .sort((a,b) => (a[0].time||'99').localeCompare(b[0].time||'99'));
+  const done = [...g.filter(m => getStatus(m,false)==='finalizado').map(m=>[m,false]), ...ko.filter(m => getStatus(m,true)==='finalizado').map(m=>[m,true])];
+
+  let html = '';
+  if (playing.length) {
+    html += `<div class="section-title">🔴 En juego ahora</div>` + playing.map(([m,ko2]) => matchCard(m, ko2)).join('');
+  }
+  if (delayed.length) {
+    html += `<div class="section-title">⚠️ Partidos demorados</div>` + delayed.map(([m,ko2]) => matchCard(m, ko2)).join('');
+  }
+  if (upcoming.length) {
+    html += `<div class="section-title">🕐 Próximos partidos</div>` + upcoming.map(([m,ko2]) => matchCard(m, ko2)).join('');
+  }
+  if (done.length) {
+    html += `<div class="section-title">✅ Resultados</div>` + done.slice().reverse().map(([m,ko2]) => matchCard(m, ko2)).join('');
+  }
+  if (!html) html = '<div class="empty">Todavía no hay partidos cargados en esta categoría.</div>';
+  document.getElementById('live-sections').innerHTML = html;
+}
+
+function renderStandings() {
+  const zs = zones.filter(z => filterCat === 'all' || (z.cat + '|' + z.gender) === filterCat);
+  if (!zs.length) { document.getElementById('standings').innerHTML = ''; return; }
+  document.getElementById('standings').innerHTML = `<div class="section-title">📊 Posiciones</div>` + zs.map(z => {
+    const st = calcZoneStandings(z.id);
+    if (!st.length) return '';
+    return `<div class="card">
+      <div class="match-meta"><span class="tag tag-zone" style="font-size:11px;">${z.name}</span><span class="tag tag-cat">${catFull(z.cat, z.gender)}</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Pareja</th><th>PJ</th><th>PG</th><th>PP</th><th>SF</th><th>SC</th><th>Pts</th></tr></thead>
+        <tbody>${st.map((s,i) => `<tr class="pos-${i+1}">
+          <td>${i+1}°</td><td style="font-weight:800;">${teamName(s.tid)}</td>
+          <td>${s.pj}</td><td>${s.pg}</td><td>${s.pp}</td><td>${s.sf}</td><td>${s.sc}</td>
+          <td style="font-weight:900;color:var(--accent);">${s.pts}</td></tr>`).join('')}
+        </tbody></table></div>
+    </div>`;
+  }).join('');
+}
+
+function renderChampions() {
+  const finals = knockoutMatches.filter(m => {
+    const maxR = Math.max(0, ...knockoutMatches.filter(x => x.cat === m.cat && x.gender === m.gender).map(x => x.round));
+    return m.round === maxR && m.t1 && m.t2 && matchWinner(m, true) && matchesFilter(m);
+  });
+  if (!finals.length) { document.getElementById('champions').innerHTML = ''; return; }
+  document.getElementById('champions').innerHTML = `<div class="section-title">🏆 Campeones</div>` + finals.map(m => {
+    const w = matchWinner(m, true);
+    const l = w === m.t1 ? m.t2 : m.t1;
+    return `<div class="champion">
+      <div class="cup">🏆</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:800;letter-spacing:1px;">${catFull(m.cat, m.gender).toUpperCase()}</div>
+      <div class="name">${teamName(w)}</div>
+      <div class="runner">🥈 Subcampeón: ${teamName(l)}</div>
+    </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
