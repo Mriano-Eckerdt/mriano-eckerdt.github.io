@@ -1848,6 +1848,11 @@ function matchesTournament(item) {
 
 function renderTournamentFilter() {
   const tournaments = getTournaments();
+  const validKeys = tournaments.map(t => t.cat + '|' + t.gender);
+  if (activeTournament !== 'all' && !validKeys.includes(activeTournament)) {
+    activeTournament = 'all';
+    localStorage.setItem('fp_activeTournament', 'all');
+  }
   if (tournaments.length <= 1) return '';
   const buttons = tournaments.map(t => {
     const key = t.cat + '|' + t.gender;
@@ -2068,6 +2073,8 @@ function clearTeams() {
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo admin puede limpiar.'); return; }
   if (!confirm('¿Borrar TODAS las parejas?')) return;
   teams = []; zones = []; groupMatches = []; groupResults = {}; knockoutMatches = []; knockoutResults = {};
+  activeTournament = 'all';
+  localStorage.setItem('fp_activeTournament', 'all');
   save();
   renderTeams(); renderZones();
 }
