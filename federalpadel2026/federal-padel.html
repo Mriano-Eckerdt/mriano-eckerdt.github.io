@@ -1008,10 +1008,8 @@ function completeSetup() {
       currentUser = { username: username, role: 'superadmin', uid: uid, token: token };
       localStorage.setItem('fp_users', JSON.stringify(users));
       localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
-      return Promise.all([
-        firebaseDb.ref('fp2026_userProfiles/' + uid).set(profile),
-        firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid)
-      ]);
+      return firebaseDb.ref('fp2026_userProfiles/' + uid).set(profile)
+        .then(() => firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid));
     })
     .then(() => {
       saveSessionToFirebase();
@@ -1059,10 +1057,9 @@ function doLogin() {
                 securityQuestion: localUser.securityQuestion || '', securityAnswer: localUser.securityAnswer || '',
                 createdAt: localUser.createdAt || Date.now()
               };
-              return Promise.all([
-                firebaseDb.ref('fp2026_userProfiles/' + uid).set(newProfile),
-                firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid)
-              ]).then(() => {
+              return firebaseDb.ref('fp2026_userProfiles/' + uid).set(newProfile)
+                .then(() => firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid))
+                .then(() => {
                 currentUser = { username: username, role: localUser.role, uid: uid, token: generateToken() };
                 localStorage.setItem('fp_currentUser', JSON.stringify(currentUser));
                 saveSessionToFirebase();
@@ -1089,10 +1086,8 @@ function doLogin() {
                   securityQuestion: localUser.securityQuestion || '', securityAnswer: localUser.securityAnswer || '',
                   createdAt: localUser.createdAt || Date.now()
                 };
-                return Promise.all([
-                  firebaseDb.ref('fp2026_userProfiles/' + uid).set(profile),
-                  firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid)
-                ]);
+                return firebaseDb.ref('fp2026_userProfiles/' + uid).set(profile)
+                  .then(() => firebaseDb.ref('fp2026_usernameToUid/' + username).set(uid));
               })
               .then(() => {
                 currentUser = { username: username, role: localUser.role, uid: firebase.auth().currentUser.uid, token: generateToken() };
@@ -1377,11 +1372,9 @@ function createUser() {
       users[username] = { password: password, role: role, createdAt: Date.now(),
         createdBy: currentUser.username, securityQuestion: securityQuestion || '', securityAnswer: securityAnswer || '' };
       localStorage.setItem('fp_users', JSON.stringify(users));
-      return Promise.all([
-        firebaseDb.ref('fp2026_userProfiles/' + newUid).set(profile),
-        firebaseDb.ref('fp2026_usernameToUid/' + username).set(newUid),
-        firebase.auth().signInWithEmailAndPassword(adminEmail, adminPassword)
-      ]);
+      return firebaseDb.ref('fp2026_userProfiles/' + newUid).set(profile)
+        .then(() => firebaseDb.ref('fp2026_usernameToUid/' + username).set(newUid))
+        .then(() => firebase.auth().signInWithEmailAndPassword(adminEmail, adminPassword));
     })
     .then(() => {
       document.getElementById('new-user-username').value = '';
