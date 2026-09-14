@@ -1713,9 +1713,15 @@ function saveToFirebase() {
     }
   }
   firebaseDb.ref('fp2026_groupStatus').set(sanitizeForFirebase(groupStatus))
-    .catch(e => console.error('Firebase group status error:', e));
+    .catch(e => {
+      console.error('Firebase group status error:', e);
+      setSyncStatus('error', '❌ Firebase rechazó el estado del partido: revisá las REGLAS (fp2026_groupStatus)');
+    });
   firebaseDb.ref('fp2026_knockoutStatus').set(sanitizeForFirebase(knockoutStatus))
-    .catch(e => console.error('Firebase knockout status error:', e));
+    .catch(e => {
+      console.error('Firebase knockout status error:', e);
+      setSyncStatus('error', '❌ Firebase rechazó el estado del partido: revisá las REGLAS (fp2026_knockoutStatus)');
+    });
 }
 
 function sanitizeForFirebase(obj) {
@@ -1803,11 +1809,17 @@ function listenToFirebaseData() {
     groupStatus = unsanitizeFromFirebase(snap.val() || {});
     saveLocalOnly();
     if (document.getElementById('tab-groups').classList.contains('active')) renderGroups();
+  }, err => {
+    console.error('Lectura de estados denegada:', err);
+    setSyncStatus('error', '❌ Sin permiso para leer estados: actualizá las REGLAS de Firebase');
   });
   firebaseDb.ref('fp2026_knockoutStatus').on('value', snap => {
     knockoutStatus = unsanitizeFromFirebase(snap.val() || {});
     saveLocalOnly();
     if (document.getElementById('tab-knockout').classList.contains('active')) renderKnockout();
+  }, err => {
+    console.error('Lectura de estados denegada:', err);
+    setSyncStatus('error', '❌ Sin permiso para leer estados: actualizá las REGLAS de Firebase');
   });
 }
 
@@ -1974,6 +1986,18 @@ const STATUS_INFO = {
   demorado:   { label: '\u{26A0}\u{FE0F} DEMORADO', cls: 'status-demorado' },
   finalizado: { label: '\u{2705} FINALIZADO', cls: 'status-finalizado' }
 };
+
+function normSets(r) {
+  r = r || {};
+  return {
+    s1t1: (r.s1t1 === undefined || r.s1t1 === null) ? '' : r.s1t1,
+    s1t2: (r.s1t2 === undefined || r.s1t2 === null) ? '' : r.s1t2,
+    s2t1: (r.s2t1 === undefined || r.s2t1 === null) ? '' : r.s2t1,
+    s2t2: (r.s2t2 === undefined || r.s2t2 === null) ? '' : r.s2t2,
+    s3t1: (r.s3t1 === undefined || r.s3t1 === null) ? '' : r.s3t1,
+    s3t2: (r.s3t2 === undefined || r.s3t2 === null) ? '' : r.s3t2
+  };
+}
 
 function getMatchStatus(mid, isKnockout) {
   const map = isKnockout ? knockoutStatus : groupStatus;
@@ -2369,6 +2393,7 @@ function saveGroupResult(mid, field, val) {
   groupResults[mid][field] = val === '' ? '' : (parseInt(val) || 0);
   maybeAutoFinish(mid, false);
   save();
+  renderGroups();
   renderStandings();
 }
 function getTeamName(id) {
@@ -2389,7 +2414,7 @@ function renderGroups() {
         <div><div class="zone-title">${z.name}</div><div class="zone-sub">${catFull(z.cat, z.gender)} • ${zMatches.length} partidos</div></div>
       </div>
       ${zMatches.map(m => {
-        const r = groupResults[m.id] || { s1t1: '', s1t2: '', s2t1: '', s2t2: '', s3t1: '', s3t2: '' };
+        const r = normSets(groupResults[m.id]);
         return `<div class="match-card">
           <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
             ${getCourtSelect(m.id, false)} ${getTimeInput(m.id, false)}
@@ -2684,7 +2709,7 @@ function renderKnockout() {
     return `<div class="bracket-col">
       <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${roundNames[rn] || 'Ronda ' + rn}</div>
       ${rMatches.map(m => {
-        const r = knockoutResults[m.id] || { s1t1: '', s1t2: '', s2t1: '', s2t2: '', s3t1: '', s3t2: '' };
+        const r = normSets(knockoutResults[m.id]);
         const t1Name = m.t1 ? getTeamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
         const t2Name = m.t2 ? getTeamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
         const winner = getKnockoutWinner(m.id);
