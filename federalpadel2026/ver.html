@@ -1,233 +1,252 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fixture y Resultados - Federal Pádel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Federal Padel 2026 - Resultados \& Fixture en Vivo</title>
   <style>
     :root {
-      --primary: #0284c7;
-      --bg: #f1f5f9;
-      --surface: #ffffff;
-      --text: #0f172a;
-      --subtext: #64748b;
-      --border: #e2e8f0;
-      --accent: #f59e0b;
+      --bg: #0b1220;
+      --card-bg: #152238;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
     }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; }
-    .header { text-align: center; margin-bottom: 15px; }
-    .header h1 { font-size: 20px; margin: 0; color: var(--primary); }
-    
-    .search-box { margin-bottom: 12px; }
-    .search-box input { width: 100%; padding: 12px; border: 2px solid var(--primary); border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-
-    .date-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; scrollbar-width: none; }
-    .date-btn { background: var(--surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 20px; font-weight: 600; white-space: nowrap; cursor: pointer; color: var(--subtext); }
+    \[data-theme="light"] {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --success: #059669;
+      --warning: #d97706;
+      --danger: #dc2626;
+    }
+    \* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 40px; transition: background 0.3s, color 0.3s; }
+    header { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; }
+    .header-title { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
+    .theme-toggle-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+    .nav-bar { display: flex; background: var(--card-bg); border-bottom: 1px solid var(--border); overflow-x: auto; }
+    .nav-btn { flex: 1; min-width: 90px; padding: 12px 5px; background: none; border: none; color: var(--text-muted); font-weight: 700; font-size: 0.85rem; cursor: pointer; text-align: center; }
+    .nav-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+    .container { max-width: 600px; margin: 0 auto; padding: 15px; }
+    .search-box { margin-bottom: 15px; }
+    .search-input { width: 100%; padding: 12px 15px; background: var(--card-bg); border: 2px solid var(--border); border-radius: 10px; color: var(--text); font-size: 1rem; }
+    .search-input:focus { border-color: var(--primary); outline: none; }
+    .date-filter-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; }
+    .date-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
     .date-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-    .nav-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 15px; }
-    .tab-btn { flex: 1; padding: 10px; text-align: center; font-weight: bold; background: none; border: none; cursor: pointer; color: var(--subtext); }
-    .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
-
-    .match-card { background: var(--surface); border-radius: 10px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
-    .match-header { display: flex; justify-content: space-between; font-size: 12px; color: var(--subtext); margin-bottom: 8px; font-weight: 600; }
-    .match-category { font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 8px; font-weight: bold; }
-    
-    .teams { display: flex; flex-direction: column; gap: 4px; font-weight: bold; font-size: 15px; }
-    .team { display: flex; justify-content: space-between; }
-    .vs { text-align: center; font-size: 11px; color: var(--subtext); margin: 2px 0; font-weight: normal; }
-
-    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-top: 10px; text-transform: uppercase; }
-    .status-PROGRAMADO { background: #e0f2fe; color: #0369a1; }
-    .status-EN_JUEGO { background: #dcfce7; color: #15803d; }
-    .status-DEMORADO { background: #fef3c7; color: #b45309; }
-    .status-FINALIZADO { background: #f1f5f9; color: #475569; }
-
-    .ranking-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 8px; overflow: hidden; }
-    .ranking-table th, .ranking-table td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
-    .ranking-table th { background: var(--primary); color: white; }
+    .match-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.8rem; color: var(--text-muted); }
+    .match-info { font-weight: 700; color: var(--primary); }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+    .badge-programado { background: var(--border); color: var(--text-muted); }
+    .badge-en\_juego { background: var(--success); color: white; animation: pulse 1.5s infinite; }
+    .badge-demorado { background: var(--warning); color: black; }
+    .badge-finalizado { background: var(--primary); color: white; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .teams-container { font-size: 1rem; font-weight: 600; line-height: 1.4; }
+    .versus { font-size: 0.75rem; color: var(--text-muted); margin: 4px 0; }
+    .score-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-weight: 800; color: var(--primary); font-size: 1.1rem; float: right; margin-top: -30px; }
+    .hidden { display: none !important; }
+    .empty-msg { text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
+    th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { color: var(--text-muted); font-size: 0.8rem; }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
+  <header>
+    <div class="header-title">🎾 Federal Padel 2026</div>
+    <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeBtn">☀️ Modo Claro</button>
+  </header>
 
-  <div class="header">
-    <h1>🏆 Campeonato de Pádel</h1>
+  <div class="nav-bar">
+    <button class="nav-btn active" onclick="switchTab('fixture')">📅 FIXTURE</button>
+    <button class="nav-btn" onclick="switchTab('resultados')">🏆 RESULTADOS</button>
+    <button class="nav-btn" onclick="switchTab('ranking')">⭐ RANKING</button>
+    <button class="nav-btn" onclick="switchTab('historial')">📜 HISTORIAL</button>
   </div>
 
-  <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchView('fixture')">FIXTURE</button>
-    <button class="tab-btn" onclick="switchView('ranking')">RANKING</button>
-  </div>
-
-  <!-- VISTA FIXTURE -->
-  <div id="view-fixture">
-    <div class="search-box">
-      <input type="text" id="player-search" placeholder="🔍 Buscar jugador por nombre o apellido..." oninput="renderFixture()">
+  <div class="container">
+    <!-- TAB FIXTURE -->
+    <div id="tab-fixture" class="tab-view">
+      <div class="search-box">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar Jugador (Ej: Pérez, Juan)..." oninput="applyFilters()">
+      </div>
+      <div class="date-filter-container" id="dateFilters"></div>
+      <div id="matchesContainer"></div>
     </div>
 
-    <div class="date-filter" id="date-buttons"></div>
+    <!-- TAB RESULTADOS -->
+    <div id="tab-resultados" class="tab-view hidden">
+      <div id="resultsContainer"></div>
+    </div>
 
-    <div id="fixture-list"></div>
-  </div>
+    <!-- TAB RANKING -->
+    <div id="tab-ranking" class="tab-view hidden">
+      <div class="search-box">
+        <input type="text" id="rankingSearchInput" class="search-input" placeholder="🔍 Buscar en Ranking..." oninput="renderRanking()">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Pos.</th>
+            <th>Jugador</th>
+            <th>Puntos</th>
+          </tr>
+        </thead>
+        <tbody id="rankingTableBody"></tbody>
+      </table>
+    </div>
 
-  <!-- VISTA RANKING -->
-  <div id="view-ranking" style="display: none;">
-    <table class="ranking-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Jugador</th>
-          <th>Puntos</th>
-        </tr>
-      </thead>
-      <tbody id="ranking-list"></tbody>
-    </table>
+    <!-- TAB HISTORIAL -->
+    <div id="tab-historial" class="tab-view hidden">
+      <div id="tournamentsHistoryContainer"></div>
+    </div>
   </div>
 
   <script>
-    // IMPORTANTE: Reemplaza con tus credenciales de Firebase
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_PROYECTO.firebaseapp.com",
-      databaseURL: "https://TU_PROYECTO.firebaseio.com",
-      projectId: "TU_PROYECTO",
-      storageBucket: "TU_PROYECTO.appspot.com",
-      messagingSenderId: "TU_SENDER_ID",
-      appId: "TU_APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    let theme = localStorage.getItem('fp\_theme') || 'dark';
+    let groupMatches = JSON.parse(localStorage.getItem('fp\_groupMatches')) || \[];
+    let knockoutMatches = JSON.parse(localStorage.getItem('fp\_knockoutMatches')) || \[];
+    let groupResults = JSON.parse(localStorage.getItem('fp\_groupResults')) || {};
+    let playerRanking = JSON.parse(localStorage.getItem('fp\_playerRanking')) || {};
+    let activeDate = 'ALL';
 
-    let allMatches = [];
-    let selectedDate = "TODOS";
-
-    // Navegación por pestañas
-    window.switchView = function(view) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      if (view === 'fixture') {
-        document.getElementById('view-fixture').style.display = 'block';
-        document.getElementById('view-ranking').style.display = 'none';
-        event.target.classList.add('active');
-      } else {
-        document.getElementById('view-fixture').style.display = 'none';
-        document.getElementById('view-ranking').style.display = 'block';
-        event.target.classList.add('active');
-        loadRanking();
-      }
-    };
-
-    // Evaluador de Estados (Autómata Demorado)
-    function getCalculatedStatus(match) {
-      if (['FINALIZADO', 'EN_JUEGO', 'SUSPENDIDO', 'CANCELADO'].includes(match.status) || match.manualStatusOverride) {
-        return match.status || 'PROGRAMADO';
-      }
-      if (!match.date || !match.startTime) return 'PROGRAMADO';
-
-      const now = new Date();
-      const currentDate = now.toISOString().split('T')[0];
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const [h, m] = match.startTime.split(':').map(Number);
-      const matchMinutes = h * 60 + m;
-
-      if (match.date < currentDate || (match.date === currentDate && currentMinutes > matchMinutes)) {
-        return 'DEMORADO';
-      }
-      return 'PROGRAMADO';
-    }
-
-    // Cargar Partidos en Tiempo Real
-    db.ref('/fp2026_data/matches').on('value', (snap) => {
-      const data = snap.val() || {};
-      allMatches = Object.values(data);
-      buildDateFilters();
-      renderFixture();
+    document.addEventListener('DOMContentLoaded', () => {
+      applyTheme(theme);
+      generateDateFilters();
+      applyFilters();
+      renderRanking();
     });
 
-    // Filtros de fecha dinámicos
-    function buildDateFilters() {
-      const container = document.getElementById('date-buttons');
-      const dates = Array.from(new Set(allMatches.map(m => m.date).filter(Boolean))).sort();
-      
-      let html = `<button class="date-btn ${selectedDate === 'TODOS' ? 'active' : ''}" onclick="filterDate('TODOS')">TODOS</button>`;
-      dates.forEach(d => {
-        html += `<button class="date-btn ${selectedDate === d ? 'active' : ''}" onclick="filterDate('${d}')">${d}</button>`;
-      });
-      container.innerHTML = html;
+    function toggleTheme() {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('fp\_theme', theme);
+      applyTheme(theme);
+    }
+    function applyTheme(t) {
+      if (t === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.getElementById('themeBtn').innerText = '🌙 Modo Oscuro';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.getElementById('themeBtn').innerText = '☀️ Modo Claro';
+      }
     }
 
-    window.filterDate = function(date) {
-      selectedDate = date;
-      buildDateFilters();
-      renderFixture();
-    };
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-view').forEach(v => v.classList.add('hidden'));
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+    }
 
-    // Renderizar Fixture con Filtros Combinados
-    window.renderFixture = function() {
-      const query = document.getElementById('player-search').value.toLowerCase().trim();
-      const container = document.getElementById('fixture-list');
-      
-      const filtered = allMatches.filter(m => {
-        const matchDate = selectedDate === "TODOS" || m.date === selectedDate;
-        const p1 = (m.player1 || "").toLowerCase();
-        const p2 = (m.player2 || "").toLowerCase();
-        const p3 = (m.player3 || "").toLowerCase();
-        const p4 = (m.player4 || "").toLowerCase();
-        
-        const matchPlayer = !query || p1.includes(query) || p2.includes(query) || p3.includes(query) || p4.includes(query);
-        return matchDate && matchPlayer;
+    function generateDateFilters() {
+      const container = document.getElementById('dateFilters');
+      const allMatches = \[...groupMatches, ...knockoutMatches];
+      const dates = \[...new Set(allMatches.map(m => m.date).filter(Boolean))].sort();
+
+      container.innerHTML = `<button class="date-btn active" onclick="setDateFilter('ALL')">TODOS</button>`;
+      dates.forEach(d => {
+        const parts = d.split('-');
+        const label = `${parts\[2]}/${parts\[1]}`;
+        container.innerHTML += `<button class="date-btn" onclick="setDateFilter('${d}')">📆 ${label}</button>`;
+      });
+    }
+
+    function setDateFilter(date) {
+      activeDate = date;
+      document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const query = document.getElementById('searchInput').value.toLowerCase().normalize("NFD").replace(/\[\\\\u0300-\\\\u036f]/g, "").trim();
+      const container = document.getElementById('matchesContainer');
+      container.innerHTML = '';
+
+      const allMatches = \[...groupMatches, ...knockoutMatches];
+      let filtered = allMatches.filter(m => {
+        const matchDate = m.date || '';
+        const dateMatch = activeDate === 'ALL' || matchDate === activeDate;
+
+        const p1 = (m.t1?.p1 || '') + ' ' + (m.t1?.p2 || '');
+        const p2 = (m.t2?.p1 || '') + ' ' + (m.t2?.p2 || '');
+        const normPlayers = (p1 + ' ' + p2).toLowerCase().normalize("NFD").replace(/\[\\\\u0300-\\\\u036f]/g, "");
+        const queryMatch = !query || normPlayers.includes(query);
+
+        return dateMatch \&\& queryMatch;
       });
 
-      // Ordenar por hora y cancha
-      filtered.sort((a,b) => (a.startTime || "").localeCompare(b.startTime || ""));
+      filtered.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
 
       if (filtered.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color:var(--subtext); padding:20px;">No se encontraron partidos.</p>`;
+        container.innerHTML = `<div class="empty-msg">No se encontraron partidos para la búsqueda seleccionada.</div>`;
         return;
       }
 
-      container.innerHTML = filtered.map(m => {
-        const st = getCalculatedStatus(m);
-        return `
-          <div class="match-card">
-            <div class="match-header">
-              <span>📅 ${m.date || 'TBD'} - 🕒 ${m.startTime || '--:--'}</span>
-              <span>🏟️ Cancha ${m.courtId || '-'}</span>
-            </div>
-            <div class="match-category">${m.category || 'Categoría Única'} - ${m.stage || 'Fase de Grupos'}</div>
-            <div class="teams">
-              <div class="team"><span>${m.player1 || 'Pareja A1'} / ${m.player2 || 'Pareja A2'}</span></div>
-              <div class="vs">VS</div>
-              <div class="team"><span>${m.player3 || 'Pareja B1'} / ${m.player4 || 'Pareja B2'}</span></div>
-            </div>
-            <div>
-              <span class="status-badge status-${st}">${st}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    };
+      filtered.forEach(m => {
+        const res = groupResults\[m.id] || {};
+        const status = m.status || 'programado';
+        const card = document.createElement('div');
+        card.className = 'match-card';
 
-    // Cargar Ranking Público
-    function loadRanking() {
-      db.ref('/fp2026_rankings/global').once('value', (snap) => {
-        const data = snap.val() || {};
-        const tbody = document.getElementById('ranking-list');
-        const list = Object.values(data).sort((a,b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-        
-        tbody.innerHTML = list.map((item, idx) => `
-          <tr>
-            <td><strong>${idx + 1}</strong></td>
-            <td>${item.name || 'Jugador'}</td>
-            <td><strong>${item.totalPoints || 0} pts</strong></td>
-          </tr>
-        `).join('') || '<tr><td colspan="3">Sin datos de ranking.</td></tr>';
+        const p1Name = m.t1 ? `${m.t1.p1} / ${m.t1.p2}` : 'A confirmar';
+        const p2Name = m.t2 ? `${m.t2.p1} / ${m.t2.p2}` : 'A confirmar';
+
+        card.innerHTML = `
+          <div class="match-header">
+            <span>📅 ${m.date || 'S/D'} - ⏰ ${m.time || '00:00'} | 🏟️ ${m.courtName || 'Cancha'}</span>
+            <span class="badge badge-${status}">${status}</span>
+          </div>
+          <div style="font-size:0.8rem; font-weight:700; color:var(--primary); margin-bottom:6px;">
+            ${m.zoneName ? 'Zona: ' + m.zoneName : 'Eliminatorias'}
+          </div>
+          <div class="teams-container">
+            <div>${p1Name}</div>
+            <div class="versus">vs</div>
+            <div>${p2Name}</div>
+          </div>
+          ${res.s1t1 !== undefined \&\& res.s1t1 !== '' ? `
+            <div class="score-box">${res.s1t1}-${res.s1t2} | ${res.s2t1}-${res.s2t2}</div>
+          ` : ''}
+          ${status === 'demorado' ? `
+            <div style="font-size:0.75rem; color:var(--warning); margin-top:8px;">
+              ⚠️ Partido demorado: el horario programado ya comenzó y el partido todavía no fue iniciado.
+            </div>
+          ` : ''}
+        `;
+        container.appendChild(card);
       });
     }
 
-    // Comprobación periódica para refrescar partidos demorados cada 60s
-    setInterval(renderFixture, 60000);
+    function renderRanking() {
+      const tbody = document.getElementById('rankingTableBody');
+      const query = (document.getElementById('rankingSearchInput')?.value || '').toLowerCase().trim();
+      tbody.innerHTML = '';
+
+      const sorted = Object.values(playerRanking).sort((a, b) => b.total - a.total);
+      sorted.filter(p => !query || p.name.toLowerCase().includes(query)).forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${idx + 1}</td>
+          <td><strong>${p.name}</strong></td>
+          <td><span class="badge badge-finalizado">${p.total} Pts</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
   </script>
 </body>
 </html>
+```
