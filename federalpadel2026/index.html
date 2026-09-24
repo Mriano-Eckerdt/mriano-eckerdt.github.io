@@ -1,9 +1,10 @@
+HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Detalle del Partido</title>
+  <title>Torneo - Lista de Partidos</title>
 
   <!-- SDKs de Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -19,249 +20,211 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: #f1f2f6;
       margin: 0;
-      padding: 16px;
+      padding-bottom: 20px;
       color: #2d3436;
+    }
+    .app-header {
+      position: sticky;
+      top: 0;
+      background-color: #0984e3;
+      color: white;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .app-header h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .role-pill {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .container {
-      background: #ffffff;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      max-width: 500px;
+      padding: 12px;
+      max-width: 600px;
       margin: 0 auto;
     }
-    .banner-invitado {
-      background-color: #dfe6e9;
-      color: #2d3436;
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 13px;
-      text-align: center;
-      margin-bottom: 16px;
+    .card-partido {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+      border: 1px solid #e1e8ef;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .badge-pendiente {
+      background-color: #ffeaa7;
+      color: #d63031;
+    }
+    .badge-finalizado {
+      background-color: #55efc4;
+      color: #00b894;
+    }
+    .fecha-partido {
+      font-size: 12px;
+      color: #636e72;
       font-weight: 500;
     }
-    .form-group {
-      margin-bottom: 16px;
-    }
-    label {
-      display: block;
+    .matchup {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+      font-size: 15px;
       font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 14px;
     }
-    input[type="datetime-local"], input[type="number"] {
-      width: 100%;
-      height: 48px;
-      font-size: 16px;
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-      background-color: #fff;
-    }
-    input:disabled {
-      background-color: #f1f2f6;
-      color: #747d8c;
-      border-color: #dfe4ea;
-    }
-    .row-sets {
+    .pareja {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
-    .row-sets span {
+    .vs-divider {
+      font-size: 11px;
+      color: #b2bec3;
       font-weight: bold;
+      text-transform: uppercase;
+      margin-left: 2px;
     }
-    .btn-submit {
-      width: 100%;
-      height: 50px;
-      background-color: #00b894;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 15px;
-    }
-    .btn-volver {
+    .btn-accion {
       display: block;
       width: 100%;
+      height: 44px;
+      line-height: 44px;
+      background-color: #0984e3;
+      color: white;
       text-align: center;
-      margin-top: 15px;
-      color: #0984e3;
-      text-decoration: none;
-      font-weight: 600;
+      border-radius: 10px;
       font-size: 14px;
+      font-weight: bold;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-accion:active {
+      background-color: #074b83;
+    }
+    .btn-admin {
+      background-color: #6c5ce7;
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h3 id="titulo-partido" style="margin-top:0;">Cargando partido...</h3>
+  <header class="app-header">
+    <h1>Fixture Torneo</h1>
+    <span id="rol-tag" class="role-pill">INVITADO</span>
+  </header>
 
-  <div id="mensaje-permiso" class="banner-invitado" style="display: none;">
-    🔒 Modo Lectura: Inicia sesión como Admin o SuperAdmin para editar los datos.
+  <div class="container">
+    <div id="lista-partidos">
+      <p style="text-align: center; color: #636e72; margin-top: 20px;">Cargando partidos...</p>
+    </div>
   </div>
 
-  <form id="form-partido">
-    <div class="form-group">
-      <label for="fechaPartido">Fecha y Hora del Partido</label>
-      <input type="datetime-local" id="fechaPartido" class="campo-edicion">
-    </div>
+  <script>
+    // Tu configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROJECT.firebaseapp.com",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_PROJECT.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    <h4 style="margin-bottom: 12px;">Resultado por Sets</h4>
+    let userRole = 'invitado';
 
-    <div class="form-group">
-      <label>Set 1</label>
-      <div class="row-sets">
-        <input type="number" id="s1_p1" min="0" max="7" placeholder="P1" class="campo-edicion">
-        <span>-</span>
-        <input type="number" id="s1_p2" min="0" max="7" placeholder="P2" class="campo-edicion">
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Set 2</label>
-      <div class="row-sets">
-        <input type="number" id="s2_p1" min="0" max="7" placeholder="P1" class="campo-edicion">
-        <span>-</span>
-        <input type="number" id="s2_p2" min="0" max="7" placeholder="P2" class="campo-edicion">
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Set 3 (Opcional)</label>
-      <div class="row-sets">
-        <input type="number" id="s3_p1" min="0" max="7" placeholder="P1" class="campo-edicion">
-        <span>-</span>
-        <input type="number" id="s3_p2" min="0" max="7" placeholder="P2" class="campo-edicion">
-      </div>
-    </div>
-
-    <button type="button" id="btnGuardar" class="btn-submit" onclick="guardarDatos()">Guardar Cambios</button>
-  </form>
-
-  <a href="index.html" class="btn-volver">← Volver al Listado</a>
-</div>
-
-<script>
-  // Tu configuración de Firebase
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "TU_PROJECT.firebaseapp.com",
-    projectId: "TU_PROJECT_ID",
-    storageBucket: "TU_PROJECT.appspot.com",
-    messagingSenderId: "TU_SENDER_ID",
-    appId: "TU_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const auth = firebase.auth();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const partidoId = urlParams.get('id');
-
-  let esEdicionPermitida = false;
-
-  auth.onAuthStateChanged(async (user) => {
-    if (user && !user.isAnonymous) {
-      try {
-        const userDoc = await db.collection('usuarios').doc(user.uid).get();
-        if (userDoc.exists) {
-          const rol = userDoc.data().rol;
-          if (rol === 'admin' || rol === 'superadmin') {
-            esEdicionPermitida = true;
+    auth.onAuthStateChanged(async (user) => {
+      const rolTag = document.getElementById('rol-tag');
+      
+      if (user && !user.isAnonymous) {
+        try {
+          const userDoc = await db.collection('usuarios').doc(user.uid).get();
+          if (userDoc.exists) {
+            userRole = userDoc.data().rol || 'invitado';
           }
+        } catch (e) {
+          console.error("Error al obtener rol:", e);
         }
-      } catch (e) {
-        console.error("Error al verificar usuario:", e);
+      } else {
+        userRole = 'invitado';
       }
-    }
 
-    aplicarPermisosUI();
-    if (partidoId) cargarDetallePartido();
-  });
+      rolTag.innerText = userRole.toUpperCase();
+      cargarPartidos();
+    });
 
-  function aplicarPermisosUI() {
-    const campos = document.querySelectorAll('.campo-edicion');
-    const btnGuardar = document.getElementById('btnGuardar');
-    const mensaje = document.getElementById('mensaje-permiso');
+    function cargarPartidos() {
+      const contenedor = document.getElementById('lista-partidos');
 
-    if (!esEdicionPermitida) {
-      campos.forEach(input => input.disabled = true);
-      btnGuardar.style.display = 'none';
-      mensaje.style.display = 'block';
-    } else {
-      campos.forEach(input => input.disabled = false);
-      btnGuardar.style.display = 'block';
-      mensaje.style.display = 'none';
-    }
-  }
+      db.collection("partidos").onSnapshot((snapshot) => {
+        contenedor.innerHTML = '';
 
-  async function cargarDetallePartido() {
-    try {
-      const doc = await db.collection('partidos').doc(partidoId).get();
-      if (doc.exists) {
-        const data = doc.data();
-        document.getElementById('titulo-partido').innerText = `${data.pareja1 || 'Pareja 1'} vs ${data.pareja2 || 'Pareja 2'}`;
-        document.getElementById('fechaPartido').value = data.fecha || '';
-        
-        if (data.resultado) {
-          document.getElementById('s1_p1').value = data.resultado.s1_p1 ?? '';
-          document.getElementById('s1_p2').value = data.resultado.s1_p2 ?? '';
-          document.getElementById('s2_p1').value = data.resultado.s2_p1 ?? '';
-          document.getElementById('s2_p2').value = data.resultado.s2_p2 ?? '';
-          document.getElementById('s3_p1').value = data.resultado.s3_p1 ?? '';
-          document.getElementById('s3_p2').value = data.resultado.s3_p2 ?? '';
+        if (snapshot.empty) {
+          contenedor.innerHTML = '<p style="text-align: center; color: #636e72;">No hay partidos cargados.</p>';
+          return;
         }
-      }
-    } catch (e) {
-      console.error("Error al cargar detalle:", e);
-    }
-  }
 
-  async function guardarDatos() {
-    if (!esEdicionPermitida) return;
+        snapshot.forEach((doc) => {
+          const partido = doc.data();
+          const pId = doc.id;
+          const esAdmin = userRole === 'admin' || userRole === 'superadmin';
 
-    const fecha = document.getElementById('fechaPartido').value;
-    const s1_p1 = document.getElementById('s1_p1').value;
-    const s1_p2 = document.getElementById('s1_p2').value;
-    const s2_p1 = document.getElementById('s2_p1').value;
-    const s2_p2 = document.getElementById('s2_p2').value;
-    const s3_p1 = document.getElementById('s3_p1').value;
-    const s3_p2 = document.getElementById('s3_p2').value;
+          const card = document.createElement('div');
+          card.className = 'card-partido';
+          card.innerHTML = `
+            <div class="card-header">
+              <span class="badge badge-${partido.estado || 'pendiente'}">${partido.estado || 'pendiente'}</span>
+              <span class="fecha-partido">${partido.fecha ? formatearFecha(partido.fecha) : 'Sin fecha'}</span>
+            </div>
+            
+            <div class="matchup">
+              <div class="pareja">🎾 ${partido.pareja1 || 'Pareja 1'}</div>
+              <div class="vs-divider">VS</div>
+              <div class="pareja">🎾 ${partido.pareja2 || 'Pareja 2'}</div>
+            </div>
 
-    // EVALUACIÓN DE ESTADO AUTOMÁTICO
-    let nuevoEstado = "pendiente";
-    
-    const set1Completo = s1_p1 !== "" && s1_p2 !== "";
-    const set2Completo = s2_p1 !== "" && s2_p2 !== "";
-
-    if (set1Completo && set2Completo) {
-      nuevoEstado = "finalizado";
-    }
-
-    try {
-      await db.collection('partidos').doc(partidoId).update({
-        fecha: fecha,
-        resultado: {
-          s1_p1: s1_p1, s1_p2: s1_p2,
-          s2_p1: s2_p1, s2_p2: s2_p2,
-          s3_p1: s3_p1, s3_p2: s3_p2
-        },
-        estado: nuevoEstado
+            <a href="ver.html?id=${pId}" class="btn-accion ${esAdmin ? 'btn-admin' : ''}">
+              ${esAdmin ? '✏️ Cargar / Editar Resultado' : '👁️ Ver Detalle'}
+            </a>
+          `;
+          contenedor.appendChild(card);
+        });
       });
-
-      alert(`Partido actualizado correctamente. Estado: ${nuevoEstado.toUpperCase()}`);
-      window.location.href = 'index.html';
-    } catch (error) {
-      console.error("Error al guardar:", error);
-      alert("Error al actualizar datos. Revisa tus permisos en Firebase.");
     }
-  }
-</script>
+
+    function formatearFecha(fechaStr) {
+      if (!fechaStr) return '';
+      const fecha = new Date(fechaStr);
+      if (isNaN(fecha)) return fechaStr;
+      return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+  </script>
 
 </body>
 </html>
