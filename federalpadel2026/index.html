@@ -1,9 +1,9 @@
-HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Se permite el desplazamiento vertical nativo en celulares -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Torneo - Lista de Partidos</title>
 
   <!-- SDKs de Firebase -->
@@ -16,20 +16,24 @@ HTML
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: #f1f2f6;
+    html, body {
+      width: 100%;
+      min-height: 100vh;
       margin: 0;
-      padding-bottom: 20px;
+      padding: 0;
+      background-color: #f1f2f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: #2d3436;
+      /* Garantiza scroll vertical fluído en celulares */
+      overflow-y: auto;
     }
     .app-header {
       position: sticky;
       top: 0;
       background-color: #0984e3;
       color: white;
-      padding: 16px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      padding: 14px 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       z-index: 100;
       display: flex;
       justify-content: space-between;
@@ -37,40 +41,44 @@ HTML
     }
     .app-header h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
     }
     .role-pill {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.25);
       padding: 4px 10px;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .container {
       padding: 12px;
-      max-width: 600px;
+      max-width: 500px;
       margin: 0 auto;
+      padding-bottom: 40px; /* Espacio extra al final para scroll completo */
     }
+    /* Tarjeta del Partido */
     .card-partido {
       background: #ffffff;
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.05);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
       border: 1px solid #e1e8ef;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    .card-header {
+    .card-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
     }
     .badge {
       padding: 4px 10px;
-      border-radius: 12px;
+      border-radius: 10px;
       font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
@@ -83,30 +91,37 @@ HTML
       background-color: #55efc4;
       color: #00b894;
     }
-    .fecha-partido {
-      font-size: 12px;
-      color: #636e72;
-      font-weight: 500;
-    }
     .matchup {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      margin-bottom: 14px;
+      gap: 4px;
       font-size: 15px;
       font-weight: 600;
+      padding: 4px 0;
     }
     .pareja {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      word-break: break-word;
     }
     .vs-divider {
-      font-size: 11px;
+      font-size: 10px;
       color: #b2bec3;
       font-weight: bold;
       text-transform: uppercase;
-      margin-left: 2px;
+    }
+    /* La fecha se ubica abajo para evitar que se corte horizontalmente */
+    .info-fecha {
+      font-size: 12px;
+      color: #636e72;
+      background-color: #f8f9fa;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
     }
     .btn-accion {
       display: block;
@@ -116,14 +131,12 @@ HTML
       background-color: #0984e3;
       color: white;
       text-align: center;
-      border-radius: 10px;
+      border-radius: 8px;
       font-size: 14px;
       font-weight: bold;
       text-decoration: none;
-      transition: background 0.2s;
-    }
-    .btn-accion:active {
-      background-color: #074b83;
+      box-sizing: border-box;
+      margin-top: 4px;
     }
     .btn-admin {
       background-color: #6c5ce7;
@@ -144,7 +157,7 @@ HTML
   </div>
 
   <script>
-    // Tu configuración de Firebase
+    // Configuración de Firebase
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
       authDomain: "TU_PROJECT.firebaseapp.com",
@@ -198,15 +211,18 @@ HTML
           const card = document.createElement('div');
           card.className = 'card-partido';
           card.innerHTML = `
-            <div class="card-header">
+            <div class="card-top">
               <span class="badge badge-${partido.estado || 'pendiente'}">${partido.estado || 'pendiente'}</span>
-              <span class="fecha-partido">${partido.fecha ? formatearFecha(partido.fecha) : 'Sin fecha'}</span>
             </div>
             
             <div class="matchup">
               <div class="pareja">🎾 ${partido.pareja1 || 'Pareja 1'}</div>
               <div class="vs-divider">VS</div>
               <div class="pareja">🎾 ${partido.pareja2 || 'Pareja 2'}</div>
+            </div>
+
+            <div class="info-fecha">
+              📅 <span>${partido.fecha ? formatearFecha(partido.fecha) : 'Fecha sin programar'}</span>
             </div>
 
             <a href="ver.html?id=${pId}" class="btn-accion ${esAdmin ? 'btn-admin' : ''}">
@@ -222,7 +238,7 @@ HTML
       if (!fechaStr) return '';
       const fecha = new Date(fechaStr);
       if (isNaN(fecha)) return fechaStr;
-      return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' hs';
     }
   </script>
 
