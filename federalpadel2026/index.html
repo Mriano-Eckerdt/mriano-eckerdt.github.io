@@ -2496,7 +2496,16 @@ function assignTeamToZone(teamId, zoneId) {
   const zone = zones.find(z => z.id == zoneId);
   if (!team || !zone) return;
   if (team.cat !== zone.cat || team.gender !== zone.gender) { alert('La categoría o género no coincide con la zona'); return; }
-  if (zone.teamIds && zone.teamIds.length >= 4) { alert('La zona ya tiene 4 equipos (máximo)'); return; }
+
+  // REGLA NUEVA: Zona A y B máximo 4, C en adelante máximo 3
+  const zName = (zone.name || '').trim().toUpperCase();
+  const maxTeams = (zName === 'ZONA A' || zName === 'ZONA B' || zName === 'A' || zName === 'B') ? 4 : 3;
+
+  if (zone.teamIds && zone.teamIds.length >= maxTeams) {
+    alert(`La ${zone.name} ya tiene ${maxTeams} equipos (máximo permitido).`);
+    return;
+  }
+
   zones.forEach(z => { z.teamIds = (z.teamIds || []).filter(tid => tid != teamId); });
   team.zoneId = zoneId ? parseFloat(zoneId) : null;
   if (zoneId) { if (!zone.teamIds) zone.teamIds = []; zone.teamIds.push(parseFloat(teamId)); }
