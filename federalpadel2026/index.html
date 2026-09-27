@@ -2642,6 +2642,38 @@ function getTeamName(id) {
   const t = teams.find(x => x.id == id);
   return t ? t.name : '???';
 }
+  // --- FUNCIÓN DE W.O. PARA GRUPOS ---
+function setWalkOverGroup(matchId, winningTeamId) {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') {
+    alert('🚫 Solo administradores pueden registrar un W.O.');
+    return;
+  }
+
+  const match = groupMatches.find(m => m.id == matchId);
+  if (!match) return;
+
+  if (!confirm(`¿Cargar W.O. a favor de ${getTeamName(winningTeamId)}? (6-0 / 6-0)`)) return;
+
+  if (!groupResults[matchId]) groupResults[matchId] = {};
+
+  if (winningTeamId == match.t1) {
+    saveGroupResult(matchId, 's1t1', 6);
+    saveGroupResult(matchId, 's1t2', 0);
+    saveGroupResult(matchId, 's2t1', 6);
+    saveGroupResult(matchId, 's2t2', 0);
+    saveGroupResult(matchId, 's3t1', '');
+    saveGroupResult(matchId, 's3t2', '');
+  } else {
+    saveGroupResult(matchId, 's1t1', 0);
+    saveGroupResult(matchId, 's1t2', 6);
+    saveGroupResult(matchId, 's2t1', 0);
+    saveGroupResult(matchId, 's2t2', 6);
+    saveGroupResult(matchId, 's3t1', '');
+    saveGroupResult(matchId, 's3t2', '');
+  }
+}
+
+// --- FUNCIÓN PARA RENDERIZAR GRUPOS ---
 function renderGroups() {
   const cont = document.getElementById('groups-content');
   const filterHtml = renderTournamentFilter();
@@ -2659,7 +2691,7 @@ function renderGroups() {
         const r = normSets(groupResults[m.id]);
         return `<div class="match-card">
           <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
-            ${getDateInput(m.id, false)} ${getCourtSelect(m.id, false)} ${getTimeInput(m.id, false)}
+            ${getDateInput(m.id, false)} ${getCourtSelect(m.id, false)}${getTimeInput(m.id, false)}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border-light);">
             <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:15px;">${getTeamName(m.t1)}</div></div>
@@ -2689,6 +2721,16 @@ function renderGroups() {
               <span style="font-size:12px;font-weight:800;color:var(--text-secondary);width:28px;">3S</span>
             </div>
           </div>
+          ${(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') ? `
+            <div style="display:flex; justify-content:center; gap:8px; margin-top:12px; padding-top:8px; border-top:1px dashed var(--border);">
+              <button class="btn btn-secondary btn-sm" style="font-size:11px; padding:4px 8px;" onclick="setWalkOverGroup(${m.id}, ${m.t1})">
+                🏳️ W.O. a favor de T1
+              </button>
+              <button class="btn btn-secondary btn-sm" style="font-size:11px; padding:4px 8px;" onclick="setWalkOverGroup(${m.id}, ${m.t2})">
+                🏳️ W.O. a favor de T2
+              </button>
+            </div>
+          ` : ''}
           ${renderStatusRow(m.id, false)}
         </div>`;
       }).join('')}
