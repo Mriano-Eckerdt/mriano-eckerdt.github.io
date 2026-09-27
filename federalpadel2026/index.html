@@ -2563,12 +2563,32 @@ function renderZones() {
 // GRUPOS
 // ============================================
 function generateGroupFixture() {
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo administradores pueden generar fixtures.'); return; }
-  const invalid = zones.find(z => { const n = (z.teamIds || []).length; return n < 3 || n > 4; });
-  if (invalid) { alert('Todas las zonas deben tener 3 o 4 equipos. Revisá "' + invalid.name + '"'); return; }
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { 
+    alert('🚫 Solo administradores pueden generar fixtures.'); 
+    return; 
+  }
+
+  // VALIDACIÓN DINÁMICA DE REGLAMENTO
+  // Zona A y B: máximo 4 equipos. Zona C+: máximo 3 equipos. Mínimo 2 equipos para generar cruces.
+  const invalid = zones.find(z => { 
+    const n = (z.teamIds || []).length;
+    const zName = (z.name || '').trim().toUpperCase();
+    const maxAllowed = (zName === 'ZONA A' || zName === 'ZONA B' || zName === 'A' || zName === 'B') ? 4 : 3;
+    
+    return n < 2 || n > maxAllowed; 
+  });
+
+  if (invalid) { 
+    const zName = (invalid.name || '').trim().toUpperCase();
+    const maxAllowed = (zName === 'ZONA A' || zName === 'ZONA B' || zName === 'A' || zName === 'B') ? 4 : 3;
+    alert(`Revisá la "${invalid.name}": debe tener entre 2 y ${maxAllowed} equipos según el reglamento.`); 
+    return; 
+  }
+
   const oldResults = { ...groupResults };
   const oldMatches = [...groupMatches];
   groupMatches = [];
+
   zones.forEach(z => {
     const tids = z.teamIds || [];
     for (let i = 0; i < tids.length; i++) {
@@ -2576,17 +2596,26 @@ function generateGroupFixture() {
         const existing = oldMatches.find(m => m.zoneId == z.id && m.t1 == tids[i] && m.t2 == tids[j]);
         const newId = existing ? existing.id : generateId();
         groupMatches.push({
-          id: newId, t1: tids[i], t2: tids[j], zoneId: z.id, cat: z.cat, gender: z.gender,
-          courtId: existing ? existing.courtId : null, courtName: existing ? existing.courtName : null, time: existing ? existing.time : null
+          id: newId, 
+          t1: tids[i], 
+          t2: tids[j], 
+          zoneId: z.id, 
+          cat: z.cat, 
+          gender: z.gender,
+          courtId: existing ? existing.courtId : null, 
+          courtName: existing ? existing.courtName : null, 
+          time: existing ? existing.time : null
         });
       }
     }
   });
+
   const validMatchIds = new Set(groupMatches.map(m => m.id));
   groupResults = {};
   for (const [mid, result] of Object.entries(oldResults)) {
     if (validMatchIds.has(parseFloat(mid))) groupResults[mid] = result;
   }
+
   save();
   renderGroups();
   alert('Fixture de grupos generado: ' + groupMatches.length + ' partidos');
