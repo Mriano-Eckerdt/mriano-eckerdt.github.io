@@ -2906,16 +2906,16 @@ function generateKnockout() {
 
     const thirdPlaceTeams = [...allQ.filter(q => q.pos === 3)];
 
-    // Mapeo ordenado exactamente para formar Cuartos en pares
+    // Tu ordenamiento original de Octavos (8 partidos)
     const octavosSchema = [
-      { z1: 'A', p1: 1, z2: 'B', p2: 2 },
-      { z1: 'H', p1: 1, z2: 'G', p2: 2 },
-      { z1: 'E', p1: 1, z2: 'F', p2: 2 },
-      { z1: 'D', p1: 1, z2: 'C', p2: 2 },
-      { z1: 'C', p1: 1, z2: 'D', p2: 2 },
-      { z1: 'F', p1: 1, z2: 'E', p2: 2 },
-      { z1: 'G', p1: 1, z2: 'H', p2: 2 },
-      { z1: 'B', p1: 1, z2: 'A', p2: 2 }
+      { z1: 'A', p1: 1, z2: 'B', p2: 2 }, // Index 0
+      { z1: 'H', p1: 1, z2: 'G', p2: 2 }, // Index 1
+      { z1: 'E', p1: 1, z2: 'F', p2: 2 }, // Index 2
+      { z1: 'D', p1: 1, z2: 'C', p2: 2 }, // Index 3
+      { z1: 'C', p1: 1, z2: 'D', p2: 2 }, // Index 4
+      { z1: 'F', p1: 1, z2: 'E', p2: 2 }, // Index 5
+      { z1: 'G', p1: 1, z2: 'H', p2: 2 }, // Index 6
+      { z1: 'B', p1: 1, z2: 'A', p2: 2 }  // Index 7
     ];
 
     let preMatches = [];
@@ -2969,8 +2969,42 @@ function generateKnockout() {
     });
 
     let tourMatches = [...preMatches, ...octavosMatches];
-    let activeRound = [...octavosMatches];
-    let currentRoundNum = activeRound[0].round + 1;
+    const roundQuartsNum = octavosMatches[0].round + 1;
+
+    // Pares estrictos para Cuartos de Final (0-1, 2-3, 4-5, 6-7)
+    const quartPairs = [
+      [0, 1], // (1°A vs 2°B) vs (1°H vs 2°G)
+      [2, 3], // (1°E vs 2°F) vs (1°D vs 2°C)
+      [4, 5], // (1°C vs 2°D) vs (1°F vs 2°E)
+      [6, 7]  // (1°G vs 2°H) vs (1°B vs 2°A)
+    ];
+
+    const quartMatches = [];
+    quartPairs.forEach(pair => {
+      const m1 = octavosMatches[pair[0]];
+      const m2 = octavosMatches[pair[1]];
+
+      if (m1 && m2) {
+        quartMatches.push({
+          id: matchId++,
+          t1: null,
+          t2: null,
+          round: roundQuartsNum,
+          cat: m1.cat,
+          gender: m1.gender,
+          prev1: m1.id,
+          prev2: m2.id,
+          label: 'Ganador Octavos vs Ganador Octavos',
+          courtId: null, courtName: null, time: null
+        });
+      }
+    });
+
+    tourMatches = tourMatches.concat(quartMatches);
+
+    // Semis y Finales
+    let activeRound = quartMatches;
+    let currentRoundNum = roundQuartsNum + 1;
 
     while (activeRound.length > 1) {
       const nextRound = [];
