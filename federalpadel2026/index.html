@@ -3741,6 +3741,7 @@ if ('serviceWorker' in navigator) {
     console.log('Service Worker registrado');
     reg.addEventListener('updatefound', () => {
       const newWorker = reg.installing;
+      if (!newWorker) return;
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
           newVersionAvailable = true;
@@ -3757,7 +3758,9 @@ if ('serviceWorker' in navigator) {
         document.getElementById('update-banner-spacer').style.display = 'block';
       }
     });
-    setInterval(() => { reg.update(); }, 300000);
+    setInterval(() => { 
+      reg.update().catch(err => console.warn('No se pudo comprobar la actualización del SW:', err)); 
+    }, 300000);
   }).catch(err => { console.log('SW error:', err); });
 }
 
