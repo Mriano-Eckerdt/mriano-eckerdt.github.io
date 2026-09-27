@@ -1,14 +1,22 @@
 const CACHE_NAME = 'federal-padel-2026-v2';
 const urlsToCache = [
-  './federal-padel.html',
+  './',
+  './index.html',
   './manifest.json'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async cache => {
+      // Agrega archivos individualmente para evitar que un 404 rompa la instalación
+      for (const url of urlsToCache) {
+        try {
+          await cache.add(url);
+        } catch (e) {
+          console.warn('No se pudo cachear el recurso:', url, e);
+        }
+      }
+    }).then(() => self.skipWaiting())
   );
 });
 
@@ -24,16 +32,20 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Solo cachear peticiones GET (no POST, PUT, etc.)
+  // Solo cachear peticiones GET
   if (event.request.method !== 'GET') {
-    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Omitir peticiones de Firebase u orígenes externos para no interferir con la autenticación
+  if (!event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       const fetchPromise = fetch(event.request).then(networkResponse => {
-        if (networkResponse && networkResponse.status === 200) {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseClone);
@@ -41,13 +53,14 @@ self.addEventListener('fetch', event => {
         }
         return networkResponse;
       }).catch(() => cachedResponse);
+
       return cachedResponse || fetchPromise;
     })
   );
 });
 
 self.addEventListener('message', event => {
-  if (event.data && event.data.action === 'skipWaiting') {
+  if (event.data && (event.data.action === 'skipWaiting' || event.data.type === 'SKIP_WAITING')) {
     self.skipWaiting();
   }
 });
