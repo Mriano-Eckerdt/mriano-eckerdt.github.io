@@ -3046,26 +3046,50 @@ function clearKnockout() {
   renderKnockout();
 }
 
-function getKnockoutWinner(matchId) {
-  const m = knockoutMatches.find(x => x.id == matchId);
+function getKnockoutWinner(mid) {
+  const m = knockoutMatches.find(match => match.id === mid);
   if (!m) return null;
-  if (m.bye && m.t1) return m.t1;
-  const r = knockoutResults[matchId];
+
+  const r = knockoutResults[mid];
   if (!r) return null;
 
-  // Si se marcó como Walkover
-  if (r.wo && r.woWinner) return r.woWinner;
+  // 1. Manejo de Walkover (W.O.)
+  if (r.wo === 't1') return m.t2; // Si se retiró Equipo 1, gana Equipo 2
+  if (r.wo === 't2') return m.t1; // Si se retiró Equipo 2, gana Equipo 1
 
-  const s1t1 = parseInt(r.s1t1)||0, s1t2 = parseInt(r.s1t2)||0;
-  const s2t1 = parseInt(r.s2t1)||0, s2t2 = parseInt(r.s2t2)||0;
-  const s3t1 = parseInt(r.s3t1)||0, s3t2 = parseInt(r.s3t2)||0;
-  let setsT1 = 0, setsT2 = 0;
-  if (s1t1 > s1t2) setsT1++; else if (s1t2 > s1t1) setsT2++;
-  if (s2t1 > s2t2) setsT1++; else if (s2t2 > s2t1) setsT2++;
-  if ((s3t1 > 0 || s3t2 > 0) && (s3t1 !== s3t2)) { if (s3t1 > s3t2) setsT1++; else setsT2++; }
+  // 2. Conteo de sets ganados por cada equipo
+  let setsT1 = 0;
+  let setsT2 = 0;
+
+  const parseScore = (val) => (val === undefined || val === '' || val === null) ? null : parseInt(val, 10);
+
+  const s1t1 = parseScore(r.s1t1), s1t2 = parseScore(r.s1t2);
+  const s2t1 = parseScore(r.s2t1), s2t2 = parseScore(r.s2t2);
+  const s3t1 = parseScore(r.s3t1), s3t2 = parseScore(r.s3t2);
+
+  // Evaluar Set 1
+  if (s1t1 !== null && s1t2 !== null) {
+    if (s1t1 > s1t2) setsT1++;
+    else if (s1t2 > s1t1) setsT2++;
+  }
+
+  // Evaluar Set 2
+  if (s2t1 !== null && s2t2 !== null) {
+    if (s2t1 > s2t2) setsT1++;
+    else if (s2t2 > s2t1) setsT2++;
+  }
+
+  // Evaluar Set 3
+  if (s3t1 !== null && s3t2 !== null) {
+    if (s3t1 > s3t2) setsT1++;
+    else if (s3t2 > s3t1) setsT2++;
+  }
+
+  // 3. Determinar el ganador final
   if (setsT1 > setsT2) return m.t1;
   if (setsT2 > setsT1) return m.t2;
-  return null;
+
+  return null; // Aún no hay ganador si van empatados o faltan cargar datos
 }
 
 function resolveKnockoutTeams() {
