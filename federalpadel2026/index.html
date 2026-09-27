@@ -2642,36 +2642,31 @@ function getTeamName(id) {
   const t = teams.find(x => x.id == id);
   return t ? t.name : '???';
 }
-  // --- FUNCIÓN DE W.O. PARA GRUPOS ---
-function setWalkOverGroup(matchId, winningTeamId) {
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') {
-    alert('🚫 Solo administradores pueden registrar un W.O.');
-    return;
+ // --- FUNCIÓN DE W.O. PARA GRUPOS SIN 6-0 / 6-0 AUTOMÁTICO ---
+  function setWalkOverGroup(matchId, winningTeamId) {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') {
+      alert('🚫 Solo administradores pueden registrar un W.O.');
+      return;
+    }
+
+    const match = groupMatches.find(m => m.id == matchId);
+    if (!match) return;
+
+    if (!confirm(`¿Registrar victoria por W.O. a favor de ${getTeamName(winningTeamId)}?`)) return;
+
+    // Se guarda la marca de W.O. y el ganador sin rellenar los sets
+    groupResults[matchId] = {
+      s1t1: '', s1t2: '',
+      s2t1: '', s2t2: '',
+      s3t1: '', s3t2: '',
+      wo: true,
+      woWinner: winningTeamId
+    };
+
+    maybeAutoFinish(matchId, false);
+    save();
+    renderGroups();
   }
-
-  const match = groupMatches.find(m => m.id == matchId);
-  if (!match) return;
-
-  if (!confirm(`¿Cargar W.O. a favor de ${getTeamName(winningTeamId)}? (6-0 / 6-0)`)) return;
-
-  if (!groupResults[matchId]) groupResults[matchId] = {};
-
-  if (winningTeamId == match.t1) {
-    saveGroupResult(matchId, 's1t1', 6);
-    saveGroupResult(matchId, 's1t2', 0);
-    saveGroupResult(matchId, 's2t1', 6);
-    saveGroupResult(matchId, 's2t2', 0);
-    saveGroupResult(matchId, 's3t1', '');
-    saveGroupResult(matchId, 's3t2', '');
-  } else {
-    saveGroupResult(matchId, 's1t1', 0);
-    saveGroupResult(matchId, 's1t2', 6);
-    saveGroupResult(matchId, 's2t1', 0);
-    saveGroupResult(matchId, 's2t2', 6);
-    saveGroupResult(matchId, 's3t1', '');
-    saveGroupResult(matchId, 's3t2', '');
-  }
-}
 
 // --- FUNCIÓN PARA RENDERIZAR GRUPOS ---
 function renderGroups() {
