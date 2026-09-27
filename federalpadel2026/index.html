@@ -2868,6 +2868,7 @@ function getZoneQualifiers() {
   });
   return qualifiers;
 }
+
 function generateKnockout() {
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo administradores pueden generar eliminatorias.'); return; }
   const incomplete = groupMatches.filter(m => {
@@ -2938,6 +2939,7 @@ function generateKnockout() {
   renderKnockout();
   alert('Eliminatorias generadas: ' + totalMatches + ' partidos');
 }
+
 function clearKnockout() {
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
   if (!confirm('¿Borrar eliminatorias?')) return;
@@ -2945,6 +2947,7 @@ function clearKnockout() {
   save();
   renderKnockout();
 }
+
 function getKnockoutWinner(matchId) {
   const m = knockoutMatches.find(x => x.id == matchId);
   if (!m) return null;
@@ -2962,6 +2965,7 @@ function getKnockoutWinner(matchId) {
   if (setsT2 > setsT1) return m.t2;
   return null;
 }
+
 function resolveKnockoutTeams() {
   let changed = false;
   knockoutMatches.forEach(m => {
@@ -2970,6 +2974,7 @@ function resolveKnockoutTeams() {
   });
   if (changed) save();
 }
+
 function saveKnockoutResult(mid, field, val) {
   const existing = knockoutResults[mid] && knockoutResults[mid][field];
   const hasValue = (existing !== undefined && existing !== '' && existing !== null);
@@ -2981,7 +2986,8 @@ function saveKnockoutResult(mid, field, val) {
   resolveKnockoutTeams();
   renderKnockout();
 }
-  function setWalkOverKnockout(matchId, winningTeamId) {
+
+function setWalkOverKnockout(matchId, winningTeamId) {
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') {
     alert('🚫 Solo administradores pueden registrar un W.O.');
     return;
@@ -3015,13 +3021,20 @@ function saveKnockoutResult(mid, field, val) {
   resolveKnockoutTeams();
   renderKnockout();
 }
+
 function renderKnockout() {
   resolveKnockoutTeams();
   const info = document.getElementById('knockout-info');
   const bracket = document.getElementById('knockout-bracket');
   const filterHtml = renderTournamentFilter();
   const filteredMatches = knockoutMatches.filter(m => matchesTournament(m));
-  if (!filteredMatches.length) { info.innerHTML = ''; bracket.innerHTML = filterHtml + '<div class="empty">Generá las eliminatorias primero</div>'; return; }
+  
+  if (!filteredMatches.length) { 
+    info.innerHTML = ''; 
+    bracket.innerHTML = filterHtml + '<div class="empty">Generá las eliminatorias primero</div>'; 
+    return; 
+  }
+
   const maxRound = Math.max(...filteredMatches.map(m => m.round));
   const roundNames = {};
   for (let r = 1; r <= maxRound; r++) {
@@ -3033,7 +3046,9 @@ function renderKnockout() {
     else if (remaining === 4) roundNames[r] = '16avos';
     else roundNames[r] = 'Ronda ' + r;
   }
+
   info.innerHTML = `<div class="alert alert-info">${knockoutMatches.length} partidos • ${maxRound} rondas</div>`;
+  
   let championHtml = '';
   const finalMatches = filteredMatches.filter(m => m.round === maxRound);
   if (finalMatches.length > 0) {
@@ -3043,42 +3058,52 @@ function renderKnockout() {
       const winnerId = getKnockoutWinner(finalMatch.id);
       if (winnerId) {
         const loserId = winnerId === finalMatch.t1 ? finalMatch.t2 : finalMatch.t1;
-        championHtml = `<div class="card" style="border-color:var(--warning);background:linear-gradient(135deg,var(--warning-light),var(--bg-card));margin-top:20px;">
-          <div style="text-align:center;padding:20px;">
-            <div style="font-size:40px;margin-bottom:8px;">🏆</div>
-            <div style="font-size:24px;font-weight:900;color:var(--text);">Campeón</div>
-            <div style="font-size:20px;font-weight:800;color:var(--success);margin-top:6px;">${getTeamName(winnerId)}</div>
-            <div style="font-size:16px;font-weight:700;color:var(--text-secondary);margin-top:12px;">🥈 Subcampeón: ${getTeamName(loserId)}</div>
-          </div></div>`;
+        championHtml = `
+          <div class="card" style="border-color:var(--warning);background:linear-gradient(135deg,var(--warning-light),var(--bg-card));margin-top:20px;">
+            <div style="text-align:center;padding:20px;">
+              <div style="font-size:40px;margin-bottom:8px;">🏆</div>
+              <div style="font-size:24px;font-weight:900;color:var(--text);">Campeón</div>
+              <div style="font-size:20px;font-weight:800;color:var(--success);margin-top:6px;">${getTeamName(winnerId)}</div>
+              <div style="font-size:16px;font-weight:700;color:var(--text-secondary);margin-top:12px;">🥈 Subcampeón: ${getTeamName(loserId)}</div>
+            </div>
+          </div>`;
       }
     }
   }
+
   const rounds = {};
-  for (let r = 1; r <= maxRound; r++) rounds[r] = filteredMatches.filter(m => m.round == r);
-  bracket.innerHTML = filterHtml + `<div class="bracket">${Object.keys(rounds).sort((a,b)=>parseInt(a)-parseInt(b)).map(rn => {
-    const rMatches = rounds[rn];
-    return `<div class="bracket-col">
-      <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${roundNames[rn] || 'Ronda ' + rn}</div>${rMatches.map(m => {
+  for (let r = 1; r <= maxRound; r++) {
+    rounds[r] = filteredMatches.filter(m => m.round == r);
+  }
+
+  const colsHtml = Object.keys(rounds)
+    .sort((a, b) => parseInt(a) - parseInt(b))
+    .map(rn => {
+      const rMatches = rounds[rn];
+      const rName = roundNames[rn] || ('Ronda ' + rn);
+
+      const matchesHtml = rMatches.map(m => {
         const r = normSets(knockoutResults[m.id]);
         const t1Name = m.t1 ? getTeamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
         const t2Name = m.t2 ? getTeamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
         const winner = getKnockoutWinner(m.id);
-        const t1Class = (winner && winner === m.t1) ? 'bracket-winner' : ((winner && winner === m.t2) ? 'bracket-loser' : '');
-        const t2Class = (winner && winner === m.t2) ? 'bracket-winner' : ((winner && winner === m.t1) ? 'bracket-loser' : '');
+        
+        let t1Color = '';
+        let t2Color = '';
+        if (winner && winner === m.t1) { t1Color = 'color:var(--success);'; t2Color = 'color:var(--danger);'; }
+        else if (winner && winner === m.t2) { t2Color = 'color:var(--success);'; t1Color = 'color:var(--danger);'; }
+
         const editable = m.t1 && m.t2;
         const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
-        return `<div class="bracket-match">
-          <div class="bracket-label">${m.label || ''}</div>
-          <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:8px;padding:6px 10px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
-            ${getDateInput(m.id, true)} ${getCourtSelect(m.id, true)} ${getTimeInput(m.id, true)}
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border-light);">
-            <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t1Class ? 'color:' + (t1Class === 'bracket-winner' ? 'var(--success)' : 'var(--danger)') + ';' : ''}">${t1Name}</div></div>
-            <div class="match-vs">VS</div>
-            <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t2Class ? 'color:' + (t2Class === 'bracket-winner' ? 'var(--success)' : 'var(--danger)') + ';' : ''}">${t2Name}</div></div>
-          </div>
-          ${editable ? `<div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+        const adminBtns = isAdmin ? `
+          <div style="display:flex; justify-content:center; gap:6px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border-light); width:100%;">
+            <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t1})">🏳️ W.O. T1</button>
+            <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">🏳️ W.O. T2</button>
+          </div>` : '';
+
+        const scoreInputs = editable ? `
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;text-align:right;">1S</span>
               <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s1t1}" onchange="saveKnockoutResult(${m.id},'s1t1',this.value)" />
@@ -3100,16 +3125,33 @@ function renderKnockout() {
               <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t2}" onchange="saveKnockoutResult(${m.id},'s3t2',this.value)" />
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">3S</span>
             </div>
-            ${isAdmin ? `<div style="display:flex; justify-content:center; gap:6px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border-light); width:100%;">
-                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t1})">🏳️ W.O. T1</button>
-                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">🏳️ W.O. T2</button>
-              </div>` : ''}
-          </div>` : '<div class="small" style="text-align:center;color:var(--text-tertiary);padding:8px 0;">Esperando equipos...</div>'}
-          ${renderStatusRow(m.id, true)}
+            ${adminBtns}
+          </div>` : '<div class="small" style="text-align:center;color:var(--text-tertiary);padding:8px 0;">Esperando equipos...</div>';
+
+        return `
+          <div class="bracket-match">
+            <div class="bracket-label">${m.label || ''}</div>
+            <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:8px;padding:6px 10px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
+              ${getDateInput(m.id, true)} ${getCourtSelect(m.id, true)} ${getTimeInput(m.id, true)}
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border-light);">
+              <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t1Color}">${t1Name}</div></div>
+              <div class="match-vs">VS</div>
+              <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t2Color}">${t2Name}</div></div>
+            </div>
+            ${scoreInputs}
+            ${renderStatusRow(m.id, true)}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="bracket-col">
+          <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${rName}</div>
+          ${matchesHtml}
         </div>`;
-      }).join('')}
-    </div>`;
-  }).join('')}</div>` + championHtml;
+    }).join('');
+
+  bracket.innerHTML = filterHtml + `<div class="bracket">${colsHtml}</div>` + championHtml;
 }
 
 // ============================================
