@@ -2868,7 +2868,7 @@ function generateKnockout() {
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') { alert('🚫 Solo administradores pueden generar eliminatorias.'); return; }
   const incomplete = groupMatches.filter(m => {
     const r = groupResults[m.id];
-    return !r || (!r.s1t1 && r.s1t1 !== 0);
+    return !r || (!r.s1t1 && r.s1t1 !== 0 && !r.wo);
   });
   if (incomplete.length) { alert('Faltan resultados en ' + incomplete.length + ' partido(s) de grupos.'); return; }
   const qualifiers = getZoneQualifiers();
@@ -2949,6 +2949,10 @@ function getKnockoutWinner(matchId) {
   if (m.bye && m.t1) return m.t1;
   const r = knockoutResults[matchId];
   if (!r) return null;
+
+  // Si se marcó como Walkover
+  if (r.wo && r.woWinner) return r.woWinner;
+
   const s1t1 = parseInt(r.s1t1)||0, s1t2 = parseInt(r.s1t2)||0;
   const s2t1 = parseInt(r.s2t1)||0, s2t2 = parseInt(r.s2t2)||0;
   const s3t1 = parseInt(r.s3t1)||0, s3t2 = parseInt(r.s3t2)||0;
@@ -2976,6 +2980,10 @@ function saveKnockoutResult(mid, field, val) {
   if (currentUser?.role === 'user' && hasValue) { alert('🚫 Solo el administrador puede modificar resultados ya cargados.'); return; }
   if (!knockoutResults[mid]) knockoutResults[mid] = {};
   knockoutResults[mid][field] = val === '' ? '' : (parseInt(val) || 0);
+  
+  // Si el usuario edita marcadores numéricos manualmente, desactiva la marca W.O. si existía
+  if (val !== '') knockoutResults[mid].wo = false;
+
   maybeAutoFinish(mid, true);
   save();
   resolveKnockoutTeams();
@@ -2991,25 +2999,16 @@ function setWalkOverKnockout(matchId, winningTeamId) {
   const match = knockoutMatches.find(m => m.id == matchId);
   if (!match) return;
 
-  if (!confirm(`¿Cargar W.O. a favor de ${getTeamName(winningTeamId)} en Eliminatorias? (6-0 / 6-0)`)) return;
+  if (!confirm(`¿Cargar W.O. a favor de ${getTeamName(winningTeamId)} en Eliminatorias?`)) return;
 
-  if (!knockoutResults[matchId]) knockoutResults[matchId] = {};
-
-  if (winningTeamId == match.t1) {
-    knockoutResults[matchId]['s1t1'] = 6;
-    knockoutResults[matchId]['s1t2'] = 0;
-    knockoutResults[matchId]['s2t1'] = 6;
-    knockoutResults[matchId]['s2t2'] = 0;
-    knockoutResults[matchId]['s3t1'] = '';
-    knockoutResults[matchId]['s3t2'] = '';
-  } else {
-    knockoutResults[matchId]['s1t1'] = 0;
-    knockoutResults[matchId]['s1t2'] = 6;
-    knockoutResults[matchId]['s2t1'] = 0;
-    knockoutResults[matchId]['s2t2'] = 6;
-    knockoutResults[matchId]['s3t1'] = '';
-    knockoutResults[matchId]['s3t2'] = '';
-  }
+  // Guarda marca W.O. dejando casillas numéricas limpias
+  knockoutResults[matchId] = {
+    s1t1: '', s1t2: '',
+    s2t1: '', s2t2: '',
+    s3t1: '', s3t2: '',
+    wo: true,
+    woWinner: winningTeamId
+  };
 
   maybeAutoFinish(matchId, true);
   save();
@@ -3049,7 +3048,7 @@ function renderKnockout() {
   if (finalMatches.length > 0) {
     const finalMatch = finalMatches[0];
     const r = knockoutResults[finalMatch.id];
-    if (r && (r.s1t1 !== '' || r.s1t1 === 0) && finalMatch.t1 && finalMatch.t2) {
+    if (r && ((r.s1t1 !== '' || r.s1t1 === 0) || r.wo) && finalMatch.t1 && finalMatch.t2) {
       const winnerId = getKnockoutWinner(finalMatch.id);
       if (winnerId) {
         const loserId = winnerId === finalMatch.t1 ? finalMatch.t2 : finalMatch.t1;
@@ -3097,8 +3096,14 @@ function renderKnockout() {
             <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">🏳️ W.O. T2</button>
           </div>` : '';
 
+        const woBadge = r && r.wo ? `
+          <div style="text-align:center;padding:4px 8px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius-sm);margin-bottom:6px;">
+            <span style="font-size:11px;font-weight:800;color:var(--text);">🏳️ GANADOR POR W.O.</span>
+          </div>` : '';
+
         const scoreInputs = editable ? `
           <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+            ${woBadge}
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;text-align:right;">1S</span>
               <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s1t1}" onchange="saveKnockoutResult(${m.id},'s1t1',this.value)" />
