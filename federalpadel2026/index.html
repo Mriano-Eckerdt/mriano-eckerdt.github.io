@@ -3218,6 +3218,12 @@ function renderKnockout() {
     rounds[r] = filteredMatches.filter(m => m.round == r);
   }
 
+  // Función auxiliar para reordenar la etiqueta de "Zona X Y°" a "Y° Zona X"
+  const formatMatchLabel = (label) => {
+    if (!label) return '';
+    return label.replace(/(Zona\s+[A-Z0-9]+)\s+(\d+°)/gi, '$2 $1');
+  };
+
   const colsHtml = Object.keys(rounds)
     .sort((a, b) => parseInt(a) - parseInt(b))
     .map(rn => {
@@ -3239,8 +3245,8 @@ function renderKnockout() {
         const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
         // --- ESTADOS Y BOTONES DE W.O. INTEGRADOS ---
-        const isWoT1 = r.wo === 't1'; // T1 hizo W.O. (Gana T2)
-        const isWoT2 = r.wo === 't2'; // T2 hizo W.O. (Gana T1)
+        const isWoT1 = r.wo === 't1';
+        const isWoT2 = r.wo === 't2';
         const hasWo = isWoT1 || isWoT2;
 
         const btnWoT1Style = isWoT1
@@ -3297,7 +3303,7 @@ function renderKnockout() {
 
         return `
           <div class="bracket-match">
-            <div class="bracket-label">${m.label || ''}</div>
+            <div class="bracket-label">${formatMatchLabel(m.label)}</div>
             <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:8px;padding:6px 10px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
               ${getDateInput(m.id, true)} ${getCourtSelect(m.id, true)} ${getTimeInput(m.id, true)}
             </div>
@@ -3320,7 +3326,6 @@ function renderKnockout() {
 
   bracket.innerHTML = filterHtml + `<div class="bracket">${colsHtml}</div>` + championHtml;
 }
-
 // ============================================
 // PAGOS PENDIENTES
 // ============================================
