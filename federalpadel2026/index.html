@@ -2972,6 +2972,15 @@ function generateKnockout() {
     const roundQuartsNum = octavosMatches[0].round + 1;
 
     // Pares estrictos para Cuartos de Final (0-1, 2-3, 4-5, 6-7)
+    // Mapeo de índices de Octavos a Cuartos de Final:
+// Index 0: 1°A vs 2°B
+// Index 1: 1°H vs 2°G
+// Index 2: 1°E vs 2°F
+// Index 3: 1°D vs 2°C
+// Index 4: 1°C vs 2°D
+// Index 5: 1°F vs 2°E
+// Index 6: 1°G vs 2°H
+// Index 7: 1°B vs 2°A
     const quartPairs = [
       [0, 1], // (1°A vs 2°B) vs (1°H vs 2°G)
       [2, 3], // (1°E vs 2°F) vs (1°D vs 2°C)
@@ -3161,7 +3170,7 @@ function renderKnockout() {
   const bracket = document.getElementById('knockout-bracket');
   const filterHtml = renderTournamentFilter();
   const filteredMatches = knockoutMatches.filter(m => matchesTournament(m));
-  
+
   if (!filteredMatches.length) { 
     info.innerHTML = ''; 
     bracket.innerHTML = filterHtml + '<div class="empty">Generá las eliminatorias primero</div>'; 
@@ -3181,7 +3190,7 @@ function renderKnockout() {
   }
 
   info.innerHTML = `<div class="alert alert-info">${knockoutMatches.length} partidos • ${maxRound} rondas</div>`;
-  
+
   let championHtml = '';
   const finalMatches = filteredMatches.filter(m => m.round === maxRound);
   if (finalMatches.length > 0) {
@@ -3216,11 +3225,11 @@ function renderKnockout() {
       const rName = roundNames[rn] || ('Ronda ' + rn);
 
       const matchesHtml = rMatches.map(m => {
-        const r = normSets(knockoutResults[m.id]);
+        const r = normSets(knockoutResults[m.id]) || {};
         const t1Name = m.t1 ? getTeamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
         const t2Name = m.t2 ? getTeamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
         const winner = getKnockoutWinner(m.id);
-        
+
         let t1Color = '';
         let t2Color = '';
         if (winner && winner === m.t1) { t1Color = 'color:var(--success);'; t2Color = 'color:var(--danger);'; }
@@ -3229,15 +3238,34 @@ function renderKnockout() {
         const editable = m.t1 && m.t2;
         const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
+        // --- ESTADOS Y BOTONES DE W.O. INTEGRADOS ---
+        const isWoT1 = r.wo === 't1'; // T1 hizo W.O. (Gana T2)
+        const isWoT2 = r.wo === 't2'; // T2 hizo W.O. (Gana T1)
+        const hasWo = isWoT1 || isWoT2;
+
+        const btnWoT1Style = isWoT1
+          ? "background-color: #dc3545; color: #ffffff; border: 1px solid #dc3545; font-weight: bold;"
+          : "background-color: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);";
+
+        const btnWoT2Style = isWoT2
+          ? "background-color: #dc3545; color: #ffffff; border: 1px solid #dc3545; font-weight: bold;"
+          : "background-color: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);";
+
         const adminBtns = isAdmin ? `
           <div style="display:flex; justify-content:center; gap:6px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border-light); width:100%;">
-            <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t1})">🏳️ W.O. T1</button>
-            <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">🏳️ W.O. T2</button>
+            <button class="btn btn-sm" style="${btnWoT1Style} font-size:10px; padding:3px 6px; cursor:pointer; border-radius:4px;" 
+                    onclick="saveKnockoutResult(${m.id}, 'wo', '${isWoT1 ? '' : 't1'}')">
+              🚩 W.O. T1 ${isWoT1 ? '✓' : ''}
+            </button>
+            <button class="btn btn-sm" style="${btnWoT2Style} font-size:10px; padding:3px 6px; cursor:pointer; border-radius:4px;" 
+                    onclick="saveKnockoutResult(${m.id}, 'wo', '${isWoT2 ? '' : 't2'}')">
+              🚩 W.O. T2 ${isWoT2 ? '✓' : ''}
+            </button>
           </div>` : '';
 
-        const woBadge = r && r.wo ? `
-          <div style="text-align:center;padding:4px 8px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius-sm);margin-bottom:6px;">
-            <span style="font-size:11px;font-weight:800;color:var(--text);">🏳️ GANADOR POR W.O.</span>
+        const woBadge = hasWo ? `
+          <div style="text-align:center;padding:4px 8px;background:var(--warning-light);border:1px solid var(--warning);border-radius:var(--radius-sm);margin-bottom:6px;width:100%;">
+            <span style="font-size:11px;font-weight:800;color:var(--text);">🚩 GANADOR POR W.O. (${isWoT1 ? 'EQUIPO 2' : 'EQUIPO 1'})</span>
           </div>` : '';
 
         const scoreInputs = editable ? `
@@ -3245,23 +3273,23 @@ function renderKnockout() {
             ${woBadge}
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;text-align:right;">1S</span>
-              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s1t1}" onchange="saveKnockoutResult(${m.id},'s1t1',this.value)" />
+              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s1t1 ?? ''}" onchange="saveKnockoutResult(${m.id},'s1t1',this.value)" />
               <span style="color:var(--text-tertiary);font-weight:900;font-size:12px;">-</span>
-              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s1t2}" onchange="saveKnockoutResult(${m.id},'s1t2',this.value)" />
+              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s1t2 ?? ''}" onchange="saveKnockoutResult(${m.id},'s1t2',this.value)" />
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">1S</span>
             </div>
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;text-align:right;">2S</span>
-              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s2t1}" onchange="saveKnockoutResult(${m.id},'s2t1',this.value)" />
+              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s2t1 ?? ''}" onchange="saveKnockoutResult(${m.id},'s2t1',this.value)" />
               <span style="color:var(--text-tertiary);font-weight:900;font-size:12px;">-</span>
-              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s2t2}" onchange="saveKnockoutResult(${m.id},'s2t2',this.value)" />
+              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s2t2 ?? ''}" onchange="saveKnockoutResult(${m.id},'s2t2',this.value)" />
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">2S</span>
             </div>
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;text-align:right;">3S</span>
-              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t1}" onchange="saveKnockoutResult(${m.id},'s3t1',this.value)" />
+              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t1 ?? ''}" onchange="saveKnockoutResult(${m.id},'s3t1',this.value)" />
               <span style="color:var(--text-tertiary);font-weight:900;font-size:12px;">-</span>
-              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t2}" onchange="saveKnockoutResult(${m.id},'s3t2',this.value)" />
+              <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t2 ?? ''}" onchange="saveKnockoutResult(${m.id},'s3t2',this.value)" />
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">3S</span>
             </div>
             ${adminBtns}
