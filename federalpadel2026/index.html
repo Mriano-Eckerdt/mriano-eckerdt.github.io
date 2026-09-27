@@ -3063,18 +3063,20 @@ function renderKnockout() {
         const t1Name = m.t1 ? getTeamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
         const t2Name = m.t2 ? getTeamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
         const winner = getKnockoutWinner(m.id);
-        const t1Class = (winner && winner === m.t1) ? 'bracket-winner' : (winner && winner === m.t2) ? 'bracket-loser' : '';
-        const t2Class = (winner && winner === m.t2) ? 'bracket-winner' : (winner && winner === m.t1) ? 'bracket-loser' : '';
+        const t1Class = (winner && winner === m.t1) ? 'bracket-winner' : ((winner && winner === m.t2) ? 'bracket-loser' : '');
+        const t2Class = (winner && winner === m.t2) ? 'bracket-winner' : ((winner && winner === m.t1) ? 'bracket-loser' : '');
         const editable = m.t1 && m.t2;
+        const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
         return `<div class="bracket-match">
           <div class="bracket-label">${m.label || ''}</div>
           <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:8px;padding:6px 10px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
             ${getDateInput(m.id, true)} ${getCourtSelect(m.id, true)} ${getTimeInput(m.id, true)}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border-light);">
-            <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t1Class?'color:'+(t1Class==='bracket-winner'?'var(--success)':(t1Class==='bracket-loser'?'var(--danger)':'var(--text)'))+';':''}">${t1Name}</div></div>
+            <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t1Class ? 'color:' + (t1Class === 'bracket-winner' ? 'var(--success)' : 'var(--danger)') + ';' : ''}">${t1Name}</div></div>
             <div class="match-vs">VS</div>
-            <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t2Class?'color:'+(t2Class==='bracket-winner'?'var(--success)':(t2Class==='bracket-loser'?'var(--danger)':'var(--text)'))+';':''}">${t2Name}</div></div>
+            <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t2Class ? 'color:' + (t2Class === 'bracket-winner' ? 'var(--success)' : 'var(--danger)') + ';' : ''}">${t2Name}</div></div>
           </div>
           ${editable ? `<div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
             <div style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;">
@@ -3098,16 +3100,10 @@ function renderKnockout() {
               <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t2}" onchange="saveKnockoutResult(${m.id},'s3t2',this.value)" />
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">3S</span>
             </div>
-            ${(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') ? `
-              <div style="display:flex; justify-content:center; gap:6px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border-light); width:100%;">
-                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t1})">
-                  🏳️ W.O. T1
-                </button>
-                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">
-                  🏳️ W.O. T2
-                </button>
-              </div>
-            ` : ''}
+            ${isAdmin ? `<div style="display:flex; justify-content:center; gap:6px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border-light); width:100%;">
+                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t1})">🏳️ W.O. T1</button>
+                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">🏳️ W.O. T2</button>
+              </div>` : ''}
           </div>` : '<div class="small" style="text-align:center;color:var(--text-tertiary);padding:8px 0;">Esperando equipos...</div>'}
           ${renderStatusRow(m.id, true)}
         </div>`;
