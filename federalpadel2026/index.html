@@ -2948,6 +2948,40 @@ function saveKnockoutResult(mid, field, val) {
   resolveKnockoutTeams();
   renderKnockout();
 }
+  function setWalkOverKnockout(matchId, winningTeamId) {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') {
+    alert('🚫 Solo administradores pueden registrar un W.O.');
+    return;
+  }
+
+  const match = knockoutMatches.find(m => m.id == matchId);
+  if (!match) return;
+
+  if (!confirm(`¿Cargar W.O. a favor de ${getTeamName(winningTeamId)} en Eliminatorias? (6-0 / 6-0)`)) return;
+
+  if (!knockoutResults[matchId]) knockoutResults[matchId] = {};
+
+  if (winningTeamId == match.t1) {
+    knockoutResults[matchId]['s1t1'] = 6;
+    knockoutResults[matchId]['s1t2'] = 0;
+    knockoutResults[matchId]['s2t1'] = 6;
+    knockoutResults[matchId]['s2t2'] = 0;
+    knockoutResults[matchId]['s3t1'] = '';
+    knockoutResults[matchId]['s3t2'] = '';
+  } else {
+    knockoutResults[matchId]['s1t1'] = 0;
+    knockoutResults[matchId]['s1t2'] = 6;
+    knockoutResults[matchId]['s2t1'] = 0;
+    knockoutResults[matchId]['s2t2'] = 6;
+    knockoutResults[matchId]['s3t1'] = '';
+    knockoutResults[matchId]['s3t2'] = '';
+  }
+
+  maybeAutoFinish(matchId, true);
+  save();
+  resolveKnockoutTeams();
+  renderKnockout();
+}
 function renderKnockout() {
   resolveKnockoutTeams();
   const info = document.getElementById('knockout-info');
@@ -2991,8 +3025,7 @@ function renderKnockout() {
   bracket.innerHTML = filterHtml + `<div class="bracket">${Object.keys(rounds).sort((a,b)=>parseInt(a)-parseInt(b)).map(rn => {
     const rMatches = rounds[rn];
     return `<div class="bracket-col">
-      <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${roundNames[rn] || 'Ronda ' + rn}</div>
-      ${rMatches.map(m => {
+      <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${roundNames[rn] \vert{}\vert{} 'Ronda ' + rn}</div>${rMatches.map(m => {
         const r = normSets(knockoutResults[m.id]);
         const t1Name = m.t1 ? getTeamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
         const t2Name = m.t2 ? getTeamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
@@ -3032,6 +3065,16 @@ function renderKnockout() {
               <input class="score-input" style="width:40px;padding:6px;font-size:12px;" type="number" min="0" value="${r.s3t2}" onchange="saveKnockoutResult(${m.id},'s3t2',this.value)" />
               <span style="font-size:11px;font-weight:800;color:var(--text-secondary);width:22px;">3S</span>
             </div>
+            ${(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') ? `
+              <div style="display:flex; justify-content:center; gap:6px; margin-top:8px; padding-top:6px; border-top:1px dashed var(--border-light); width:100%;">
+                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t1})">
+                  🏳️ W.O. T1
+                </button>
+                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:3px 6px;" onclick="setWalkOverKnockout(${m.id}, ${m.t2})">
+                  🏳️ W.O. T2
+                </button>
+              </div>
+            ` : ''}
           </div>` : '<div class="small" style="text-align:center;color:var(--text-tertiary);padding:8px 0;">Esperando equipos...</div>'}
           ${renderStatusRow(m.id, true)}
         </div>`;
