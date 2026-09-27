@@ -3058,7 +3058,7 @@ function renderKnockout() {
   bracket.innerHTML = filterHtml + `<div class="bracket">${Object.keys(rounds).sort((a,b)=>parseInt(a)-parseInt(b)).map(rn => {
     const rMatches = rounds[rn];
     return `<div class="bracket-col">
-      <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${roundNames[rn] \vert{}\vert{} 'Ronda ' + rn}</div>${rMatches.map(m => {
+      <div style="text-align:center;font-size:11px;font-weight:800;color:var(--text-secondary);margin-bottom:8px;">${roundNames[rn] || 'Ronda ' + rn}</div>${rMatches.map(m => {
         const r = normSets(knockoutResults[m.id]);
         const t1Name = m.t1 ? getTeamName(m.t1) : (m.prev1 ? 'Ganador anterior' : '???');
         const t2Name = m.t2 ? getTeamName(m.t2) : (m.prev2 ? 'Ganador anterior' : '???');
