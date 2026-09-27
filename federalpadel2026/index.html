@@ -2904,9 +2904,9 @@ function generateKnockout() {
       return allQ.find(q => q.zoneId === zid && q.pos === pos);
     };
 
-    const thirdPlaceTeams = allQ.filter(q => q.pos === 3);
+    const thirdPlaceTeams = [...allQ.filter(q => q.pos === 3)];
 
-    // Mapeo estándar de Octavos FAP (A vs B, H vs G, E vs F, D vs C, C vs D, F vs E, G vs H, B vs A)
+    // Mapeo ordenado exactamente para formar Cuartos en pares
     const octavosSchema = [
       { z1: 'A', p1: 1, z2: 'B', p2: 2 },
       { z1: 'H', p1: 1, z2: 'G', p2: 2 },
@@ -2918,90 +2918,59 @@ function generateKnockout() {
       { z1: 'B', p1: 1, z2: 'A', p2: 2 }
     ];
 
-    let currentRoundMatches = [];
+    let preMatches = [];
+    let octavosMatches = [];
 
-    if (thirdPlaceTeams.length > 0) {
-      // SI HAY 3° CLASIFICADOS: Se genera 16avos para las llaves con 3°
-      let preRound = [];
-      let nextRoundOctavos = [];
+    octavosSchema.forEach(s => {
+      const t1 = getTeam(s.z1, s.p1);
+      const t2 = getTeam(s.z2, s.p2);
+      const t3Idx = thirdPlaceTeams.findIndex(t => t.zoneId !== (t2 ? t2.zoneId : null) && t.zoneId !== (t1 ? t1.zoneId : null));
 
-      octavosSchema.forEach(s => {
-        const t1 = getTeam(s.z1, s.p1);
-        const t2 = getTeam(s.z2, s.p2);
-        const t3 = thirdPlaceTeams.find(t => t.zoneId !== (t2 ? t2.zoneId : null) && t.zoneId !== (t1 ? t1.zoneId : null));
+      if (t2 && t3Idx !== -1) {
+        const t3 = thirdPlaceTeams.splice(t3Idx, 1)[0];
+        const preMatchId = matchId++;
 
-        if (t2 && t3) {
-          // El 2° juega 16avos contra el 3° para acceder a Octavos
-          const preMatchId = matchId++;
-          const idxT3 = thirdPlaceTeams.indexOf(t3);
-          if (idxT3 > -1) thirdPlaceTeams.splice(idxT3, 1);
+        preMatches.push({
+          id: preMatchId,
+          t1: t2.tid,
+          t2: t3.tid,
+          round: 1,
+          cat: allQ[0].cat,
+          gender: allQ[0].gender,
+          label: `16avos: Zona ${s.z2} 2° vs Zona ${t3.zoneName} 3°`,
+          courtId: null, courtName: null, time: null
+        });
 
-          preRound.push({
-            id: preMatchId,
-            t1: t2.tid,
-            t2: t3.tid,
-            round: 1,
-            cat: allQ[0].cat,
-            gender: allQ[0].gender,
-            label: `Zona ${s.z2} 2° vs Zona ${t3.zoneName} 3°`,
-            courtId: null, courtName: null, time: null
-          });
+        octavosMatches.push({
+          id: matchId++,
+          t1: t1 ? t1.tid : null,
+          t2: null,
+          prev1: null,
+          prev2: preMatchId,
+          round: 2,
+          cat: allQ[0].cat,
+          gender: allQ[0].gender,
+          label: `Zona ${s.z1} 1° vs Ganador 16avos`,
+          courtId: null, courtName: null, time: null
+        });
+      } else {
+        const roundNumber = preMatches.length > 0 ? 2 : 1;
+        octavosMatches.push({
+          id: matchId++,
+          t1: t1 ? t1.tid : null,
+          t2: t2 ? t2.tid : null,
+          round: roundNumber,
+          cat: allQ[0].cat,
+          gender: allQ[0].gender,
+          label: `Zona ${s.z1} 1° vs Zona ${s.z2} 2°`,
+          courtId: null, courtName: null, time: null
+        });
+      }
+    });
 
-          // Octavos: El 1° espera al ganador de este 16avos
-          nextRoundOctavos.push({
-            id: matchId++,
-            t1: t1 ? t1.tid : null,
-            t2: null,
-            prev1: null,
-            prev2: preMatchId,
-            round: 2,
-            cat: allQ[0].cat,
-            gender: allQ[0].gender,
-            label: `Zona ${s.z1} 1° vs Ganador 16avos`,
-            courtId: null, courtName: null, time: null
-          });
-        } else {
-          // Directo a Octavos sin pasar por 16avos
-          nextRoundOctavos.push({
-            id: matchId++,
-            t1: t1 ? t1.tid : null,
-            t2: t2 ? t2.tid : null,
-            round: 1,
-            cat: allQ[0].cat,
-            gender: allQ[0].gender,
-            label: `Zona ${s.z1} 1° vs Zona ${s.z2} 2°`,
-            courtId: null, courtName: null, time: null
-          });
-        }
-      });
-
-      knockoutMatches = knockoutMatches.concat(preRound);
-      currentRoundMatches = nextRoundOctavos;
-
-    } else {
-      // SIN 3° CLASIFICADOS: Va directo a Octavos con la siembra directa
-      octavosSchema.forEach(s => {
-        const t1 = getTeam(s.z1, s.p1);
-        const t2 = getTeam(s.z2, s.p2);
-        if (t1 || t2) {
-          currentRoundMatches.push({
-            id: matchId++,
-            t1: t1 ? t1.tid : null,
-            t2: t2 ? t2.tid : null,
-            round: 1,
-            cat: allQ[0].cat,
-            gender: allQ[0].gender,
-            label: `Zona ${s.z1} 1° vs Zona ${s.z2} 2°`,
-            courtId: null, courtName: null, time: null
-          });
-        }
-      });
-    }
-
-    // Encadenamiento de rondas hasta la Final (4tos, Semis, Final)
-    let allMatches = [...knockoutMatches, ...currentRoundMatches];
-    let activeRound = currentRoundMatches;
-    let roundNum = activeRound.length > 0 ? activeRound[0].round + 1 : 2;
+    let tourMatches = [...preMatches, ...octavosMatches];
+    let activeRound = [...octavosMatches];
+    let currentRoundNum = activeRound[0].round + 1;
 
     while (activeRound.length > 1) {
       const nextRound = [];
@@ -3012,7 +2981,7 @@ function generateKnockout() {
           id: matchId++,
           t1: null,
           t2: null,
-          round: roundNum,
+          round: currentRoundNum,
           cat: m1.cat,
           gender: m1.gender,
           prev1: m1.id,
@@ -3021,13 +2990,13 @@ function generateKnockout() {
           courtId: null, courtName: null, time: null
         });
       }
-      allMatches = allMatches.concat(nextRound);
+      tourMatches = tourMatches.concat(nextRound);
       activeRound = nextRound;
-      roundNum++;
+      currentRoundNum++;
     }
 
-    knockoutMatches = allMatches;
-    totalMatches += allMatches.length;
+    knockoutMatches = knockoutMatches.concat(tourMatches);
+    totalMatches += tourMatches.length;
   });
 
   save();
