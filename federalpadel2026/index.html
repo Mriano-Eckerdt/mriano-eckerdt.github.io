@@ -3125,12 +3125,30 @@ function resolveKnockoutTeams() {
 function saveKnockoutResult(mid, field, val) {
   const existing = knockoutResults[mid] && knockoutResults[mid][field];
   const hasValue = (existing !== undefined && existing !== '' && existing !== null);
-  if (currentUser?.role === 'user' && hasValue) { alert('🚫 Solo el administrador puede modificar resultados ya cargados.'); return; }
-  if (!knockoutResults[mid]) knockoutResults[mid] = {};
-  knockoutResults[mid][field] = val === '' ? '' : (parseInt(val) || 0);
+  if (currentUser?.role === 'user' && hasValue) { 
+    alert('🚫 Solo el administrador puede modificar resultados ya cargados.'); 
+    return; 
+  }
   
-  // Si el usuario edita marcadores numéricos manualmente, desactiva la marca W.O. si existía
-  if (val !== '') knockoutResults[mid].wo = false;
+  if (!knockoutResults[mid]) knockoutResults[mid] = {};
+
+  if (field === 'wo') {
+    // Si se hace clic en W.O., guardamos directamente la cadena ('t1', 't2' o '')
+    // Si vuelve a tocar el mismo botón, se desmarca
+    if (knockoutResults[mid].wo === val) {
+      knockoutResults[mid].wo = '';
+    } else {
+      knockoutResults[mid].wo = val;
+    }
+  } else {
+    // Para los sets (s1t1, s1t2, etc.) guardamos números
+    knockoutResults[mid][field] = val === '' ? '' : (parseInt(val) || 0);
+    
+    // Si el usuario edita los marcadores numéricos manualmente, desactiva el W.O.
+    if (val !== '') {
+      knockoutResults[mid].wo = '';
+    }
+  }
 
   maybeAutoFinish(mid, true);
   save();
