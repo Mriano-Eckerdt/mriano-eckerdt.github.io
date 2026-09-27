@@ -1792,25 +1792,27 @@ function listenToFirebaseData() {
   });
 
   // Escuchar resultados de eliminatorias POR PARTIDO (atómico)
-  firebaseDb.ref('fp2026_knockoutResults').on('child_added', snap => {
-    const mid = snap.key.replace(/_/g, '.');
-    const result = snap.val();
-    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
-      knockoutResults[mid] = result;
-      saveLocalOnly();
-      renderKnockout();
-    }
-  });
+firebaseDb.ref('fp2026_knockoutResults').on('child_added', snap => {
+  const mid = snap.key.replace(/_/g, '.');
+  const result = snap.val();
+  
+  // Acepta la actualización si hay puntos grabados O si hay un registro de W.O.
+  if (result && (result.s1t1 !== '' || result.s1t1 === 0 || result.wo)) {
+    knockoutResults[mid] = result;
+    saveLocalOnly();
+    renderKnockout();
+  }
+});
 
   firebaseDb.ref('fp2026_knockoutResults').on('child_changed', snap => {
-    const mid = snap.key.replace(/_/g, '.');
-    const result = snap.val();
-    if (result && (result.s1t1 !== '' || result.s1t1 === 0)) {
-      knockoutResults[mid] = result;
-      saveLocalOnly();
-      renderKnockout();
-    }
-  });
+  const mid = snap.key.replace(/_/g, '.');
+  const result = snap.val();
+  if (result && (result.s1t1 !== '' || result.s1t1 === 0 || result.wo)) {
+    knockoutResults[mid] = result;
+    saveLocalOnly();
+    renderKnockout();
+  }
+});
 
   // Escuchar horarios configurados
   firebaseDb.ref('fp2026_timeSlots').on('value', snap => {
