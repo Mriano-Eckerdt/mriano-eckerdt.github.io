@@ -3095,8 +3095,20 @@ function getKnockoutWinner(mid) {
 function resolveKnockoutTeams() {
   let changed = false;
   knockoutMatches.forEach(m => {
-    if (m.prev1 && !m.t1) { const w = getKnockoutWinner(m.prev1); if (w) { m.t1 = w; changed = true; } }
-    if (m.prev2 && !m.t2) { const w = getKnockoutWinner(m.prev2); if (w) { m.t2 = w; changed = true; } }
+    if (m.prev1) {
+      const w1 = getKnockoutWinner(m.prev1);
+      if (w1 && m.t1 !== w1) { 
+        m.t1 = w1; 
+        changed = true; 
+      }
+    }
+    if (m.prev2) {
+      const w2 = getKnockoutWinner(m.prev2);
+      if (w2 && m.t2 !== w2) { 
+        m.t2 = w2; 
+        changed = true; 
+      }
+    }
   });
   if (changed) save();
 }
