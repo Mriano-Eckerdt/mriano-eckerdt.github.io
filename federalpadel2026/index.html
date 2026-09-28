@@ -2327,11 +2327,12 @@ function getCourtSelect(matchId, isKnockout) {
   const m = isKnockout ? knockoutMatches.find(x => x.id == matchId) : groupMatches.find(x => x.id == matchId);
   const selected = m && m.courtId ? m.courtId : '';
   const onchange = isKnockout ? `saveKnockoutCourt(${matchId},this.value)` : `saveGroupCourt(${matchId},this.value)`;
-  return `<select class="payment-method-select" style="min-width:120px;" onchange="${onchange}">
+  return `<select class="payment-method-select" style="flex: 1 1 50%; min-width: 0; max-width: 100%; font-size: 11px; padding: 4px; box-sizing: border-box;" onchange="${onchange}">
     <option value="">🏟️ Cancha...</option>
     ${courts.map(c => `<option value="${c.id}" ${selected == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
   </select>`;
 }
+
 function getTimeInput(matchId, isKnockout) {
   const m = isKnockout ? knockoutMatches.find(x => x.id == matchId) : groupMatches.find(x => x.id == matchId);
   const value = m && m.time ? m.time : '';
@@ -2339,7 +2340,7 @@ function getTimeInput(matchId, isKnockout) {
   const slots = timeSlots.length ? timeSlots : buildTimeSlots();
   const options = slots.map(s => `<option value="${s}" ${s === value ? 'selected' : ''}>${s}</option>`).join('');
   const extra = value && !slots.includes(value) ? `<option value="${value}" selected>${value}</option>` : '';
-  return `<select class="payment-method-select" style="min-width:88px;padding:6px 8px;font-size:13px;" onchange="${onchange}">
+  return `<select class="payment-method-select" style="flex: 1 1 45%; min-width: 0; max-width: 100%; font-size: 11px; padding: 4px; box-sizing: border-box;" onchange="${onchange}">
     <option value="">\u{1F55A} Hora...</option>${extra}${options}
   </select>`;
 }
