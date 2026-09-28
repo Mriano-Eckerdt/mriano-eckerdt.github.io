@@ -2415,7 +2415,7 @@ function getDateInput(matchId, isKnockout) {
   const m = isKnockout ? knockoutMatches.find(x => x.id == matchId) : groupMatches.find(x => x.id == matchId);
   const value = m && m.date ? m.date : '';
   const onchange = isKnockout ? `saveKnockoutDate(${matchId},this.value)` : `saveGroupDate(${matchId},this.value)`;
-  return `<input type="date" class="score-input" style="width:135px;padding:6px 8px;font-size:12px;" value="${value}" onchange="${onchange}" />`;
+  return `<input type="date" class="score-input" style="flex: 1 1 100%; max-width: 100%; font-size: 11px; padding: 4px; box-sizing: border-box; text-align: center;" value="${value}" onchange="${onchange}" />`;
 }
 function saveGroupCourt(mid, courtId) {
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') return;
