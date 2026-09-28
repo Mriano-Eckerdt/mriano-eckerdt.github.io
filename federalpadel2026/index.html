@@ -3895,6 +3895,108 @@ setInterval(() => {
 loadCoverPhoto();
 renderConfig();
 if (autoSync && driveUrl) { setSyncStatus('idle', 'Sincronización automática activada'); }
+
+// --- GESTIÓN DE CATEGORÍAS PERSONALIZADAS ---
+const DEFAULT_CATEGORIES = ["1ra", "2da", "3ra", "4ta", "5ta", "6ta", "7ma", "suma5", "suma6", "suma9", "suma10", "suma13"];
+let appCategories = JSON.parse(localStorage.getItem("fp_categories")) || [...DEFAULT_CATEGORIES];
+
+function initCategoriesSync() {
+  if (typeof db !== "undefined" && db) {
+    db.ref("fp2026_categories").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && Array.isArray(data)) {
+        appCategories = data;
+      } else {
+        db.ref("fp2026_categories").set(appCategories);
+      }
+      localStorage.setItem("fp_categories", JSON.stringify(appCategories));
+      renderCategorySelects();
+      renderCategoriesList();
+    });
+  } else {
+    renderCategorySelects();
+    renderCategoriesList();
+  }
+}
+
+function renderCategorySelects() {
+  const catSelects = [document.getElementById("cat"), document.getElementById("zone-cat")];
+  
+  catSelects.forEach(select => {
+    if (!select) return;
+    const currentValue = select.value;
+    select.innerHTML = "";
+    
+    appCategories.forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat;
+      option.textContent = cat;
+      select.appendChild(option);
+    });
+
+    if (currentValue && appCategories.includes(currentValue)) {
+      select.value = currentValue;
+    }
+  });
+}
+
+function renderCategoriesList() {
+  const listContainer = document.getElementById("custom-categories-list");
+  if (!listContainer) return;
+  
+  listContainer.innerHTML = "";
+  
+  appCategories.forEach((cat) => {
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.style.cssText = "padding:6px 12px; font-size:13px; display:inline-flex; align-items:center; gap:8px; background:var(--card2); border:1px solid var(--border); border-radius:8px;";
+    badge.innerHTML = `
+      <span>${cat}</span>
+      <button onclick="removeCustomCategory('${cat}')" style="background:none; border:none; color:var(--red); cursor:pointer; font-weight:bold; padding:0 2px;">✕</button>
+    `;
+    listContainer.appendChild(badge);
+  });
+}
+
+function addCustomCategory() {
+  const input = document.getElementById("new-custom-category");
+  if (!input) return;
+  
+  const newCat = input.value.trim();
+  if (!newCat) {
+    alert("Por favor, ingresá el nombre de la categoría.");
+    return;
+  }
+  
+  if (appCategories.some(c => c.toLowerCase() === newCat.toLowerCase())) {
+    alert("Esta categoría ya existe.");
+    return;
+  }
+
+  appCategories.push(newCat);
+  input.value = "";
+  saveCategories();
+}
+
+function removeCustomCategory(catToRemove) {
+  if (confirm(`¿Estás seguro de eliminar la categoría "${catToRemove}"?`)) {
+    appCategories = appCategories.filter(cat => cat !== catToRemove);
+    saveCategories();
+  }
+}
+
+function saveCategories() {
+  localStorage.setItem("fp_categories", JSON.stringify(appCategories));
+  if (typeof db !== "undefined" && db) {
+    db.ref("fp2026_categories").set(appCategories);
+  }
+  renderCategorySelects();
+  renderCategoriesList();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initCategoriesSync();
+});
 </script>
 </body>
 </html>
