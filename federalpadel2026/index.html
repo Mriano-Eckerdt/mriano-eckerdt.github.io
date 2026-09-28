@@ -3324,9 +3324,11 @@ function renderKnockout() {
         return `
           <div class="bracket-match">
             <div class="bracket-label">${formatMatchLabel(m.label)}</div>
-            <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:8px;padding:6px 10px;background:var(--bg-dark);border-radius:var(--radius-sm);border:1px solid var(--border);">
-              ${getDateInput(m.id, true)} ${getCourtSelect(m.id, true)} ${getTimeInput(m.id, true)}
-            </div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px; margin-bottom:8px; padding:6px; background:var(--bg-dark); border-radius:var(--radius-sm); border:1px solid var(--border); width:100%; box-sizing:border-box;">
+  ${getDateInput(m.id, true)} 
+  ${getCourtSelect(m.id, true)} 
+  ${getTimeInput(m.id, true)}
+</div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border-light);">
               <div style="text-align:center;flex:1;"><div style="font-weight:800;font-size:13px;${t1Color}">${t1Name}</div></div>
               <div class="match-vs">VS</div>
