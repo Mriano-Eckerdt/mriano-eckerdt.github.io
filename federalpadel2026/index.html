@@ -372,18 +372,7 @@
             <option value="mix">👫 Mixto</option>
           </select>
           <select class="select" id="cat">
-            <option value="1ra">1ra</option>
-            <option value="2da">2da</option>
-            <option value="3ra">3ra</option>
-            <option value="4ta">4ta</option>
-            <option value="5ta">5ta</option>
-            <option value="6ta">6ta</option>
-            <option value="7ma">7ma</option>
-            <option value="suma5">Suma 5</option>
-            <option value="suma6">Suma 6</option>
-            <option value="suma9">Suma 9</option>
-            <option value="suma10">Suma 10</option>
-            <option value="suma13">Suma 13</option>
+            <!-- Se carga dinámicamente desde JavaScript -->
           </select>
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
@@ -491,19 +480,8 @@
             <option value="dam">👩 Damas</option>
             <option value="mix">👫 Mixto</option>
           </select>
-          <select class="select" id="zone-cat">
-            <option value="1ra">1ra</option>
-            <option value="2da">2da</option>
-            <option value="3ra">3ra</option>
-            <option value="4ta">4ta</option>
-            <option value="5ta">5ta</option>
-            <option value="6ta">6ta</option>
-            <option value="7ma">7ma</option>
-            <option value="suma5">Suma 5</option>
-            <option value="suma6">Suma 6</option>
-            <option value="suma9">Suma 9</option>
-            <option value="suma10">Suma 10</option>
-            <option value="suma13">Suma 13</option>
+         <select class="select" id="zone-cat">
+            <!-- Se carga dinámicamente desde JavaScript -->
           </select>
         </div>
         <div class="actions">
@@ -664,7 +642,21 @@
           </div>
         </div>
       </div>
+<!-- NUEVO: TARJETA DE GESTIÓN DE CATEGORÍAS -->
+      <div class="card" id="categories-management-card">
+        <div class="card-title">🏷️ Gestión de Categorías</div>
+        <p class="card-subtitle">Agregá o eliminá las categorías disponibles para tu torneo.</p>
+        
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+          <input type="text" class="input" id="new-custom-category" placeholder="Ej: 8va, Promocional, Suma 12" style="margin-bottom:0; flex:1;" />
+          <button class="btn btn-primary" onclick="addCustomCategory()">➕ Agregar</button>
+        </div>
 
+        <div style="margin-top:16px;">
+          <label class="small" style="font-weight:700; display:block; margin-bottom:8px;">Categorías configuradas:</label>
+          <div id="custom-categories-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+        </div>
+      </div>
       <div class="card" id="firebase-config-card">
         <div class="card-title">🔥 Configuración de Firebase</div>
         <p class="card-subtitle">Conectá la app con Firebase Realtime Database para sincronizar en tiempo real.</p>
