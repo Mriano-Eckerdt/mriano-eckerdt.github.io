@@ -9,14 +9,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://kimi-web-img.moonshot.cn/img/static.vecteezy.com/8c81c1b987fda513fa6acbdf23cfa8c48608747b.jpg",
+      "src": "./logo.png",
       "sizes": "192x192",
-      "type": "image/jpeg"
+      "type": "image/png"
     },
     {
-      "src": "https://kimi-web-img.moonshot.cn/img/static.vecteezy.com/8c81c1b987fda513fa6acbdf23cfa8c48608747b.jpg",
+      "src": "./logo.png",
       "sizes": "512x512",
-      "type": "image/jpeg"
+      "type": "image/png"
     }
   ]
 }
