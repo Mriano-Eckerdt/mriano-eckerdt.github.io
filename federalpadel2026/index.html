@@ -687,7 +687,7 @@
         <div class="card-title">🖼️ Foto de Portada</div>
         <p class="card-subtitle">Cambiá la imagen que aparece en la cabecera de la app.</p>
         <div style="margin-bottom:12px;">
-          <img id="admin-cover-preview" src="https://kimi-web-img.moonshot.cn/img/static.vecteezy.com/8c81c1b987fda513fa6acbdf23cfa8c48608747b.jpg" style="width:100%;max-width:300px;border-radius:12px;border:2px solid var(--border);margin-bottom:10px;" />
+         <img id="admin-cover-preview" src="./logo.png" style="width:100%;max-width:300px;border-radius:12px;border:2px solid var(--border);margin-bottom:10px;" />
         </div>
         <label class="btn btn-primary" style="cursor:pointer;display:inline-block;">
           📷 Elegir foto de portada
@@ -3748,7 +3748,7 @@ function changeCoverPhoto(input) {
 }
 function resetCoverPhoto() {
   localStorage.removeItem('fp_coverPhoto');
-  const defaultUrl = 'https://kimi-web-img.moonshot.cn/img/static.vecteezy.com/8c81c1b987fda513fa6acbdf23cfa8c48608747b.jpg';
+const defaultUrl = './logo.png';
   document.getElementById('header-cover').src = defaultUrl;
   document.getElementById('admin-cover-preview').src = defaultUrl;
   document.getElementById('cover-photo-msg').innerHTML = '<span style="color:var(--success);">✅ Foto restaurada</span>';
