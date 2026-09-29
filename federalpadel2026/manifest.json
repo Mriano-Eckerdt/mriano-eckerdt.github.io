@@ -2,7 +2,7 @@
   "name": "Federal Padel 2026",
   "short_name": "FedPadel26",
   "description": "Organizá tu campeonato de pádel",
-  "start_url": "./federal-padel.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#eff6ff",
   "theme_color": "#1e40af",
